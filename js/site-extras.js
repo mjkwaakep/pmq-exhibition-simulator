@@ -1,0 +1,391 @@
+// ============================================================================
+// 3D 뷰에 덧붙이는 보조 레이어 — 기존 벽/테이블/책은 건드리지 않고 그룹만 추가한다.
+//   buildDimensions : 스케치업처럼 화면에 띄우는 치수선(벽·통로·테이블·간격)
+//   buildFlow       : 02_포스터월_위치표시.pdf에 표시된 관람 동선 화살표
+//   buildSite       : Qube 현장 사진(04_현장사진4)처럼 보이게 하는 마감(카펫·검은 천장·커튼 등)
+// 세 그룹 모두 "3D 옵션" 체크박스로 켜고 끈다.
+// ============================================================================
+import * as THREE from 'three';
+import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS, GAP_BETWEEN_TRANSLUCENT_MM } from './constants.js';
+
+const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
+const fmt = (m) => Math.round(m * 1000).toLocaleString('en-US');
+
+/** 항상 카메라를 바라보고 화면상 크기가 일정한 글자 라벨. */
+function makeLabel(text, { fg = '#ffffff', size = 0.015 } = {}) {
+  // 박스 없이 글자만 — 어두운 카펫과 흰 벽 어디서도 읽히도록 얇은 어두운 외곽선을 두른다.
+  const font = '600 44px -apple-system, "Helvetica Neue", Arial, sans-serif';
+  const c = document.createElement('canvas');
+  let ctx = c.getContext('2d');
+  ctx.font = font;
+  const tw = Math.ceil(ctx.measureText(text).width);
+  c.width = tw + 20; c.height = 64;
+  ctx = c.getContext('2d');
+  ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round'; ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+  ctx.strokeText(text, c.width / 2, c.height / 2 + 2);
+  ctx.fillStyle = fg;
+  ctx.fillText(text, c.width / 2, c.height / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, sizeAttenuation: false, depthTest: false, fog: false, toneMapped: false }));
+  sp.scale.set(size * c.width / c.height, size, 1);
+  sp.renderOrder = 1000;
+  return sp;
+}
+
+// ---------------------------------------------------------------- 치수선
+export function buildDimensions() {
+  const group = new THREE.Group();
+  const pts = [];
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  // a→b 구간의 치수. off만큼 띄운 곳에 치수선을 긋고 양 끝에 보조선을 내린다.
+  const dim = (a, b, off, text) => {
+    const o = V(...off), A = V(...a), B = V(...b);
+    const p = A.clone().add(o), q = B.clone().add(o);
+    const over = o.clone().normalize().multiplyScalar(0.12);
+    pts.push(A, p.clone().add(over), B, q.clone().add(over), p, q);
+    const label = makeLabel(text || fmt(A.distanceTo(B)));
+    label.position.copy(p).add(q).multiplyScalar(0.5);
+    group.add(label);
+  };
+
+  const w1 = WALLS[0], w2 = WALLS[1], w3 = WALLS[2];
+  const cx = w1.origin.x / 1000, cz = w1.origin.z / 1000;
+  const L1 = w1.lengthMM / 1000, h1 = w1.heightMM / 1000;
+  const L2 = w2.lengthMM / 1000, L3 = w3.lengthMM / 1000, h2 = w2.heightMM / 1000;
+  const gap = GAP_BETWEEN_TRANSLUCENT_MM / 1000;
+  const z2e = cz + L2, z3s = z2e + gap, z3e = z3s + L3;
+
+  // 벽
+  dim([cx, h1, cz], [cx + L1, h1, cz], [0, 0.35, 0]);            // Wall 01 길이
+  dim([cx + L1, 0, cz], [cx + L1, h1, cz], [0.45, 0, 0]);        // Wall 01 높이
+  dim([cx, h2, cz], [cx, h2, z2e], [0, 0.35, 0]);                // Wall 02 길이
+  dim([cx, h2, z2e], [cx, h2, z3s], [0, 0.35, 0]);               // 통로
+  dim([cx, h2, z3s], [cx, h2, z3e], [0, 0.35, 0]);               // Wall 03 길이
+  dim([cx, 0, z3e], [cx, h2, z3e], [0, 0, 0.3]);                 // Wall 02·03 높이
+
+  // 도록 테이블 (view-3d.js _buildProps 와 같은 값)
+  const tLen = 8.3, tDep = 0.5, tGap = 1.85, tCx = 20.0, tZ0 = 5.0, tH = 0.9;
+  const tx1 = tCx - tLen / 2, tx2 = tCx + tLen / 2;
+  const tz = (i) => tZ0 + i * (tDep + tGap);
+  dim([tx1, tH, tz(0) - tDep / 2], [tx2, tH, tz(0) - tDep / 2], [0, 0, -0.4]);          // 길이
+  dim([tx2, tH, tz(0) - tDep / 2], [tx2, tH, tz(0) + tDep / 2], [0.45, 0, 0]);          // 폭
+  for (let i = 0; i < 3; i++) dim([tx2, tH, tz(i) + tDep / 2], [tx2, tH, tz(i + 1) - tDep / 2], [0.45, 0, 0]); // 테이블 간격
+  dim([tx1, 0, tz(3) + tDep / 2], [tx1, tH, tz(3) + tDep / 2], [-0.35, 0, 0]);          // 상판 높이
+  dim([cx, 0.03, tz(1)], [tx1, 0.03, tz(1)], [0, 0, 1.2]);                              // Wall 02·03 ↔ 테이블
+  dim([tx1, 0.03, cz], [tx1, 0.03, tz(0) - tDep / 2], [-0.6, 0, 0]);                    // Wall 01 ↔ 테이블
+
+  // 보조 테이블
+  const sLen = 1.0, sGap = 0.9, introFaceZ = D - 2.75, introT = 0.1, introH = 2.5;
+  const sZ = introFaceZ - introT - 0.15 - tDep / 2; // view-3d.js _buildProps 와 같은 값
+  const sX0 = tCx - (4 * sLen + 3 * sGap) / 2;
+  dim([sX0, tH, sZ - tDep / 2], [sX0 + sLen, tH, sZ - tDep / 2], [0, 0, -0.35]);        // 길이
+  dim([sX0 + sLen, tH, sZ - tDep / 2], [sX0 + sLen + sGap, tH, sZ - tDep / 2], [0, 0, -0.35]); // 보조 테이블 간격
+  dim([sX0 + 4 * sLen + 3 * sGap, tH, sZ - tDep / 2], [sX0 + 4 * sLen + 3 * sGap, tH, sZ + tDep / 2], [0.45, 0, 0]);                // 폭
+  dim([tx2, 0.03, introFaceZ], [tx2, 0.03, D], [1.1, 0, 0]);                            // 소개 벽 ↔ 하단 외벽
+  dim([tx1, introH, introFaceZ], [tx2, introH, introFaceZ], [0, 0.3, 0]);               // 소개 벽 길이
+  dim([tx2, 0, introFaceZ], [tx2, introH, introFaceZ], [0.35, 0, 0]);                   // 소개 벽 높이
+  dim([tx2, 0.03, tz(3) + tDep / 2], [tx2, 0.03, sZ - tDep / 2], [1.1, 0, 0]);          // 도록 ↔ 보조 테이블
+
+  // 리플렛 테이블(전면 창 쪽, 모서리 굴린 직사각형) — view-3d.js _buildProps 와 같은 값
+  dim([W - 1.95 - 0.45, tH, D / 2 - 1.5], [W - 1.95 - 0.45, tH, D / 2 + 1.5], [-0.4, 0, 0]);     // 길이 3,000
+  dim([W - 1.95 - 0.45, tH, D / 2 - 1.5], [W - 1.95 + 0.45, tH, D / 2 - 1.5], [0, 0, -0.4]);     // 폭 900
+  dim([W - 1.95 + 0.45, 0.03, D / 2 + 1.5], [W, 0.03, D / 2 + 1.5], [0, 0, 0.5]);               // 테이블 ↔ 전면 창
+
+  // 공간
+  dim([0, 0.03, 0], [W, 0.03, 0], [0, 0, 0.9]);                                         // 가로
+  dim([0, 0.03, 0], [0, 0.03, D], [4.5, 0, 0]);                                         // 깊이
+  dim([W, 0, 0], [W, H, 0], [-0.4, 0, 0.4]);                                            // 층고
+  dim([0, 0.03, cz], [cx, 0.03, cz], [0, 0, 2.6]);                                      // 왼쪽 외벽 ↔ Wall 01
+  dim([cx + L1, 0.03, cz], [W, 0.03, cz], [0, 0, 1.4]);                                 // Wall 01 ↔ 전면 창
+  dim([cx + 2, 0.03, 0], [cx + 2, 0.03, cz], [1.2, 0, 0]);                              // 상단 외벽 ↔ Wall 01
+  dim([cx, 0.03, z3e], [cx, 0.03, D], [-0.9, 0, 0]);                                    // Wall 03 ↔ 하단 외벽
+
+  const lines = new THREE.LineSegments(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0x00b4f0, depthTest: false, fog: false, toneMapped: false })
+  );
+  lines.renderOrder = 999;
+  group.add(lines);
+  return group;
+}
+
+// ---------------------------------------------------------------- 동선 화살표
+export function buildFlow() {
+  const group = new THREE.Group();
+  const Y = 0.02;
+  const mats = {};
+  const mat = (color) => mats[color] || (mats[color] = new THREE.MeshBasicMaterial({ color, fog: false, toneMapped: false, side: THREE.DoubleSide }));
+  // 바닥에 깔리는 점선 + 끝 화살촉. path = [[x,z], ...]
+  const arrow = (path, color = 0xff3b30) => {
+    const m = mat(color);
+    const headL = 0.55, headW = 0.26, lineW = 0.08, dash = 0.42, gapL = 0.26;
+    for (let i = 0; i < path.length - 1; i++) {
+      const a = new THREE.Vector2(...path[i]), b = new THREE.Vector2(...path[i + 1]);
+      const last = i === path.length - 2;
+      const dir = b.clone().sub(a);
+      const len = dir.length() - (last ? headL : 0);
+      dir.normalize();
+      const ang = Math.atan2(dir.y, dir.x);
+      for (let s = 0; s < len; s += dash + gapL) {
+        const l = Math.min(dash, len - s);
+        const g = new THREE.Mesh(new THREE.PlaneGeometry(l, lineW), m);
+        g.rotation.set(-Math.PI / 2, 0, -ang);
+        g.position.set(a.x + dir.x * (s + l / 2), Y, a.y + dir.y * (s + l / 2));
+        group.add(g);
+      }
+      if (last) {
+        const n = new THREE.Vector2(-dir.y, dir.x);
+        const base = b.clone().sub(dir.clone().multiplyScalar(headL));
+        const tri = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(b.x, Y, b.y),
+          new THREE.Vector3(base.x + n.x * headW, Y, base.y + n.y * headW),
+          new THREE.Vector3(base.x - n.x * headW, Y, base.y - n.y * headW),
+        ]);
+        group.add(new THREE.Mesh(tri, m));
+      }
+    }
+  };
+
+  // 도면 기준: 입구(하단 외벽 오른쪽) → 디지털 존 앞 → Wall 03·02를 따라 위로 → Wall 01을 따라
+  // 오른쪽으로 → 테이블 사이를 지그재그 → 다시 입구로(출구 = 입구).
+  const tx1 = 15.85, tx2 = 24.15;
+  const aisle = [3.375, 6.175, 8.525, 10.875, 13.55]; // Wall01~테이블1, 테이블 사이 3곳, 테이블4 아래
+  arrow([[25.5, D - 0.6], [25.5, 15.4]]);                         // 입구 ↑
+  arrow([[25.5, aisle[4]], [21.1, aisle[4]]]);                    // 테이블4 아래 ←
+  arrow([[tx1 + 0.1, aisle[4]], [18.7, aisle[4]], [18.7, 14.95]]); // 디지털 존으로 ↓
+  arrow([[13.7, 18.6], [13.7, 11.0]]);                            // Wall 03 앞 ↑
+  arrow([[13.7, 9.6], [13.7, 4.4]]);                              // Wall 02 앞 ↑
+  arrow([[tx1 + 0.1, aisle[0]], [18.7, aisle[0]]]);               // Wall 01 앞 →
+  arrow([[20.3, aisle[0]], [26.8, aisle[0]]]);                    // Wall 01 앞 →
+  arrow([[26.8, 4.4], [26.8, 8.2]]);                              // 테이블 오른쪽 ↓
+  arrow([[tx1 + 0.1, aisle[1]], [18.7, aisle[1]]]);               // 테이블 1·2 사이 →
+  arrow([[tx2 - 0.1, aisle[2]], [21.1, aisle[2]]]);               // 테이블 2·3 사이 ←
+  arrow([[tx1 + 0.1, aisle[3]], [18.7, aisle[3]]]);               // 테이블 3·4 사이 →
+  arrow([[27.2, 15.4], [27.2, D - 0.6]]);                         // 출구 ↓
+  arrow([[9.9, 3.2], [9.9, 7.0]], 0x2f6bff);                      // 리테일 구역 입구(파란 화살표)
+
+  // 입구 표시(도면의 초록 원)
+  const spot = new THREE.Mesh(
+    new THREE.CircleGeometry(1.15, 48),
+    new THREE.MeshBasicMaterial({ color: 0x5be04a, transparent: true, opacity: 0.55, fog: false, toneMapped: false })
+  );
+  spot.rotation.x = -Math.PI / 2;
+  spot.position.set(26.3, 0.015, D - 1.3);
+  group.add(spot);
+
+  const tag = (text, x, y, z, border) => {
+    const l = makeLabel(text, { fg: border });
+    l.position.set(x, y, z);
+    group.add(l);
+  };
+  tag('Entrance · Exit (전시 입구 = 출구)', 26.3, 0.6, D - 1.3, '#7dff6b');
+  tag('Entrance to Retail Area', 9.9, 0.6, 5.0, '#8fb4ff');
+  return group;
+}
+
+// ---------------------------------------------------------------- 현장 재현
+function carpetTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#2b2927';
+  ctx.fillRect(0, 0, 512, 512);
+  // 창 쪽(X 방향)으로 흐르는 가는 결 — 현장 카펫 타일의 줄무늬
+  for (let i = 0; i < 5200; i++) {
+    const x = Math.random() * 512, y = Math.random() * 512;
+    const len = 14 + Math.random() * 60;
+    const v = 48 + Math.random() * 62;
+    ctx.strokeStyle = `rgba(${v + 8},${v + 2},${v - 2},${0.14 + Math.random() * 0.3})`;
+    ctx.lineWidth = 0.6 + Math.random() * 0.9;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y); ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(26, 17);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function curtainTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 8;
+  const ctx = c.getContext('2d');
+  for (let x = 0; x < 256; x++) {
+    const v = 14 + Math.round(13 * (0.5 + 0.5 * Math.sin((x / 256) * Math.PI * 2 * 8)) + Math.random() * 3);
+    ctx.fillStyle = `rgb(${v},${v},${v + 1})`;
+    ctx.fillRect(x, 0, 1, 8);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+export function buildSite() {
+  const group = new THREE.Group();
+  const curtainH = 3.4; // 커튼 상단(그 위는 밝은 벌크헤드가 보인다)
+
+  // 바닥: 어두운 줄무늬 카펫
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(W + 4, D + 4),
+    new THREE.MeshStandardMaterial({ map: carpetTexture(), roughness: 0.95, metalness: 0 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(W / 2, 0.004, D / 2);
+  floor.receiveShadow = true;
+  group.add(floor);
+
+  // 천장: 검은 노출 천장
+  const ceilMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9, metalness: 0 });
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(W + 4, D + 4), ceilMat);
+  ceil.rotation.x = Math.PI / 2;
+  ceil.position.set(W / 2, H - 0.012, D / 2);
+  group.add(ceil);
+
+  // 천장 설비는 따로 묶어 둔다 — 카메라가 천장 위로 올라가면(전체 보기) 숨긴다.
+  const ceilGroup = new THREE.Group();
+  group.add(ceilGroup);
+  group.userData.ceiling = ceilGroup;
+
+  // 천장 라인조명: 방 폭을 가로지르는 길쭉한 사각 루프
+  const ledMat = new THREE.MeshBasicMaterial({ color: 0xfff6e6, fog: false });
+  const loop = (cxm, wx, dz) => {
+    const t = 0.05, y = H - 0.05, czm = D / 2;
+    [[wx, t, 0, dz / 2], [wx, t, 0, -dz / 2], [t, dz, wx / 2, 0], [t, dz, -wx / 2, 0]].forEach(([bw, bd, ox, oz]) => {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(bw, 0.03, bd), ledMat);
+      bar.position.set(cxm + ox, y, czm + oz);
+      ceilGroup.add(bar);
+    });
+  };
+  [3.6, 11.4, 19.2, 27.0].forEach((x) => loop(x, 4.6, 13.5));
+
+  // 트랙 조명: 검은 레일 + 스팟
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.6, metalness: 0.4 });
+  [7.5, 15.3, 23.1].forEach((x) => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 13), railMat);
+    rail.position.set(x, H - 0.12, D / 2);
+    ceilGroup.add(rail);
+    for (let i = 0; i < 7; i++) {
+      const can = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.16, 12), railMat);
+      can.position.set(x, H - 0.24, D / 2 - 6 + i * 2);
+      can.rotation.z = 0.35;
+      ceilGroup.add(can);
+    }
+  });
+
+  // 가장 바깥 둘레(커튼·출입문·창 쪽)는 따로 묶어 둔다 — "외벽·커튼·출입구 표시" 체크박스로 켜고 끈다.
+  const perim = new THREE.Group();
+  group.add(perim);
+  group.userData.perimeter = perim;
+
+  // 커튼(양쪽 긴 변 + 왼쪽 짧은 변). 하단 외벽 쪽은 출입문 자리만 비운다.
+  const curtainBase = curtainTexture();
+  const curtain = (len, x, z, rotY, h = curtainH) => {
+    const tex = curtainBase.clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(len / 1.6, 1);
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(len, h),
+      new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0, side: THREE.DoubleSide })
+    );
+    m.rotation.y = rotY;
+    m.position.set(x, h / 2, z);
+    perim.add(m);
+  };
+  const doorX1 = 24.8, doorX2 = 27.8, pierW = 1.2; // 출입문 — 원본 도면의 EXIT A(왼쪽 커튼에서 약 26.4m)
+  curtain(W - pierW, (W - pierW) / 2, 0.07, 0);                                   // 상단 외벽
+  curtain(doorX1, doorX1 / 2, D - 0.07, Math.PI);                                 // 하단 외벽(문 왼쪽)
+  curtain(W - pierW - doorX2, (doorX2 + W - pierW) / 2, D - 0.07, Math.PI);       // 하단 외벽(문 오른쪽)
+  curtain(D, 0.07, D / 2, Math.PI / 2);                                           // 왼쪽 외벽
+
+  // 출입문: 유리문 두 짝 + 초록 EXIT 표시
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0xb9bdc0, roughness: 0.4, metalness: 0.6 });
+  const doorGlass = new THREE.MeshStandardMaterial({ color: 0xcfd6d8, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.55 });
+  const doorH = 2.3, doorW = doorX2 - doorX1;
+  const wallAbove = new THREE.Mesh(new THREE.PlaneGeometry(doorW, curtainH - doorH), new THREE.MeshStandardMaterial({ color: 0xdcdad4, roughness: 0.9 }));
+  wallAbove.rotation.y = Math.PI;
+  wallAbove.position.set((doorX1 + doorX2) / 2, doorH + (curtainH - doorH) / 2, D - 0.05);
+  perim.add(wallAbove);
+  for (let i = 0; i < 4; i++) {
+    const lw = doorW / 4, x = doorX1 + lw * (i + 0.5);
+    const leaf = new THREE.Mesh(new THREE.PlaneGeometry(lw - 0.08, doorH - 0.08), doorGlass);
+    leaf.rotation.y = Math.PI;
+    leaf.position.set(x, doorH / 2, D - 0.05);
+    perim.add(leaf);
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, doorH, 0.06), frameMat);
+    post.position.set(doorX1 + lw * i, doorH / 2, D - 0.05);
+    perim.add(post);
+  }
+  const postEnd = new THREE.Mesh(new THREE.BoxGeometry(0.05, doorH, 0.06), frameMat);
+  postEnd.position.set(doorX2, doorH / 2, D - 0.05);
+  perim.add(postEnd);
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW, 0.06, 0.06), frameMat);
+  lintel.position.set((doorX1 + doorX2) / 2, doorH, D - 0.05);
+  perim.add(lintel);
+  const exitSign = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.04), new THREE.MeshBasicMaterial({ color: 0x1fbf5a, fog: false }));
+  exitSign.position.set((doorX1 + doorX2) / 2, doorH + 0.22, D - 0.1);
+  perim.add(exitSign);
+
+  // 전면 창 쪽: 가운데는 바닥부터 올라오는 통유리, 양옆은 벽기둥 + 젖혀 둔 검은 커튼, 위는 내려온 천장
+  const x = W - 0.03;
+  const pierMat = new THREE.MeshStandardMaterial({ color: 0xcfcdc7, roughness: 0.9, side: THREE.DoubleSide });
+  const glassTop = 3.6, pierD = 4.2, drapeD = 1.3;
+  const panel = (z1, z2, y1, y2, mat, dx = 0) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(z2 - z1, y2 - y1), mat);
+    m.rotation.y = -Math.PI / 2;
+    m.position.set(x + dx, (y1 + y2) / 2, (z1 + z2) / 2);
+    perim.add(m);
+    return m;
+  };
+  panel(0, pierD, 0, H, pierMat);
+  panel(D - pierD, D, 0, H, pierMat);
+  panel(pierD, D - pierD, glassTop, H, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, side: THREE.DoubleSide }));
+  // 창밖 풍경(바닥부터) — 기존 창 아래 흰 띠는 현장 재현 모드에서만 숨긴다(view-3d.js setSiteVisible)
+  const outside = new THREE.TextureLoader().load('textures/outside.jpg');
+  outside.colorSpace = THREE.SRGBColorSpace;
+  panel(pierD, D - pierD, 0, glassTop, new THREE.MeshBasicMaterial({ map: outside, fog: false, side: THREE.DoubleSide }), 0.9);
+  const drape = (z1, z2) => {
+    const tex = curtainBase.clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(2.2, 1);
+    panel(z1, z2, 0, glassTop, new THREE.MeshStandardMaterial({ map: tex, roughness: 1, side: THREE.DoubleSide }), -0.06);
+  };
+  drape(pierD, pierD + drapeD);
+  drape(D - pierD - drapeD, D - pierD);
+  // 창호 세로 프레임
+  for (let i = 1; i < 8; i++) {
+    const z = pierD + drapeD + ((D - 2 * (pierD + drapeD)) * i) / 8;
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.03, glassTop, 0.03), frameMat);
+    bar.position.set(x, glassTop / 2, z);
+    perim.add(bar);
+  }
+
+  // 컨트롤 부스 — 원본 도면 왼쪽 위(왼쪽 커튼에서 약 5.9~11.3m, 상단 벽에서 약 2.6m 돌출). 도면에서 잰 근삿값.
+  const booth = new THREE.Mesh(
+    new THREE.BoxGeometry(5.4, 2.6, 2.5),
+    new THREE.MeshStandardMaterial({ color: 0x3a3a3c, roughness: 0.85, transparent: true, opacity: 0.85 })
+  );
+  booth.position.set(8.6, 1.3, 0.1 + 1.25);
+  group.add(booth);
+
+  // 왼쪽 계단 개구부 난간(창 가까운 상단 외벽 쪽)
+  const railing = new THREE.Group();
+  const rl = 3.2, rh = 1.05;
+  [rh, rh * 0.5].forEach((y) => {
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, rl, 10), frameMat);
+    bar.rotation.z = Math.PI / 2;
+    bar.position.set(0, y, 0);
+    railing.add(bar);
+  });
+  for (let i = 0; i <= 4; i++) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, rh, 10), frameMat);
+    p.position.set(-rl / 2 + (rl * i) / 4, rh / 2, 0);
+    railing.add(p);
+  }
+  railing.position.set(W - 3.4, 0, 1.3);
+  group.add(railing);
+
+  return group;
+}

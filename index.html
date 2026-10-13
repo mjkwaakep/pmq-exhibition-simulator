@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PMQ 포스터 월 시뮬레이터</title>
+<link rel="stylesheet" href="css/style.css" />
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div class="app">
+
+  <aside class="panel">
+    <div class="brand">
+      <div class="brand-title">PMQ POSTER WALL</div>
+      <div class="brand-sub">설치 전 레이아웃 · 3D 시뮬레이터</div>
+    </div>
+
+    <section class="ctrl-group">
+      <div class="ctrl-label">VIEW</div>
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="layout">LAYOUT</button>
+        <button class="view-tab" data-view="three">3D PERSPECTIVE</button>
+      </div>
+    </section>
+
+    <section class="ctrl-group" id="poster-counts" data-auto-layout><!-- 벽별 블록은 app.js가 생성 --></section>
+
+    <section class="ctrl-group" data-auto-layout>
+      <div class="ctrl-label">GAP</div>
+      <div class="gap-fixed">50 mm <span>(고정)</span></div>
+    </section>
+
+    <section class="ctrl-group" data-auto-layout>
+      <div class="ctrl-label">ACTION</div>
+      <button class="action-btn primary" id="btn-random">🎲 랜덤 배치</button>
+      <button class="action-btn" id="btn-reset">초기화</button>
+    </section>
+
+    <section class="ctrl-group" id="camera-group" hidden>
+      <div class="ctrl-label">3D CAMERA</div>
+      <div class="cam-btns">
+        <button class="cam-btn" data-cam="full">전체 보기</button>
+        <button class="cam-btn" data-cam="left">왼쪽 보기</button>
+        <button class="cam-btn" data-cam="front">정면 보기</button>
+        <button class="cam-btn" data-cam="right">오른쪽 보기</button>
+        <button class="cam-btn" data-cam="entrance">입구에서 보기</button>
+      </div>
+      <div class="ctrl-label" style="margin-top:12px">전시 버전</div>
+      <div class="ver-btns">
+        <button class="ver-btn" data-ver="a">A · Wall 1 액자</button>
+        <button class="ver-btn active" data-ver="b">B · Wall 1 모니터</button>
+        <button class="ver-btn" data-ver="c">C · Wall 종이</button>
+      </div>
+      <div class="ctrl-label" style="margin-top:12px">3D 옵션</div>
+      <label class="toggle-row"><input type="checkbox" id="toggle-tables" checked /> 테이블 표시</label>
+      <label class="toggle-row"><input type="checkbox" id="toggle-people" checked /> 사람 표시</label>
+      <label class="toggle-row"><input type="checkbox" id="toggle-lights" checked /> 천장 조명(형광등) 표시</label>
+      <label class="toggle-row"><input type="checkbox" id="toggle-dims" checked /> 치수 표시</label>
+      <label class="toggle-row"><input type="checkbox" id="toggle-flow" checked /> 동선 화살표 표시</label>
+      <label class="toggle-row"><input type="checkbox" id="toggle-site" checked /> 현장 재현(카펫·커튼·검은 천장)</label>
+      <label class="toggle-row"><input type="checkbox" id="toggle-perimeter" checked /> 외벽·커튼·출입구 표시</label>
+    </section>
+
+    <section class="ctrl-group">
+      <div class="ctrl-label">WALL SIZE</div>
+      <table class="wall-table">
+        <tr><td>Wall 01 <em>화이트월</em></td><td>17,000 × 2,500 mm</td><td class="tag opaque">불투명</td></tr>
+        <tr><td>Wall 02 <em>반투명 1</em></td><td>7,000 × 2,200 mm</td><td class="tag translucent">반투명</td></tr>
+        <tr><td>통로 <em>Wall02·03 사이</em></td><td>2,000 mm</td><td></td></tr>
+        <tr><td>Wall 03 <em>반투명 2</em></td><td>8,000 × 2,200 mm</td><td class="tag translucent">반투명</td></tr>
+        <tr class="total-row"><td>TOTAL</td><td>34,000 mm</td><td></td></tr>
+      </table>
+      <div class="wall-shape-note">ㄱ자(L자) 구조 — 화이트월(17m)에서 90도 꺾여 반투명벽 두 장(7m+8m)이 2m 통로를 사이에 두고 같은 직선으로 이어짐</div>
+    </section>
+
+    <section class="ctrl-group">
+      <div class="ctrl-label">TABLE SIZE</div>
+      <table class="wall-table">
+        <tr><td>도록 테이블 <em>4개</em></td><td>8,300 × 500 mm</td><td></td></tr>
+        <tr><td>보조 테이블 <em>4개</em></td><td>1,000 × 500 mm</td><td></td></tr>
+        <tr><td>보조 테이블 간격</td><td>900 mm</td><td></td></tr>
+        <tr><td>리플렛 테이블 <em>창 쪽 1개 · 둥근 모서리 R350</em></td><td>3,000 × 900 mm</td><td></td></tr>
+        <tr><td>iMac 24" <em>보조 테이블마다 1대</em></td><td>547 × 461 × 147 mm</td><td></td></tr>
+        <tr><td>상판 높이</td><td>900 mm</td><td></td></tr>
+      </table>
+    </section>
+
+    <section class="ctrl-group">
+      <div class="ctrl-label">SPACE (전시장 전체)</div>
+      <table class="wall-table">
+        <tr><td>가로 × 깊이 × 층고</td><td>31,000 × 20,000 × 5,000 mm</td><td></td></tr>
+        <tr><td>Wall01 ↔ 왼쪽 외벽</td><td>11,500 mm</td><td></td></tr>
+        <tr><td>Wall01 ↔ 전면 창</td><td>2,500 mm</td><td></td></tr>
+        <tr><td>Wall01 ↔ 상단 외벽</td><td>2,000 mm</td><td></td></tr>
+        <tr><td>Wall03 ↔ 하단 외벽</td><td>1,000 mm</td><td></td></tr>
+        <tr><td>테이블 ↔ 테이블</td><td>1,850 mm</td><td></td></tr>
+        <tr><td>Wall02·03 ↔ 도록 테이블</td><td>4,350 mm</td><td></td></tr>
+        <tr><td>전시 소개 벽 <em>8,300 × 2,500</em> ↔ 하단 외벽(출입구 커튼벽)</td><td>2,750 mm</td><td></td></tr>
+        <tr><td>보조 테이블 ↔ 전시 소개 벽</td><td>150 mm</td><td></td></tr>
+        <tr><td>Wall01 ↔ 도록 테이블</td><td>2,750 mm</td><td></td></tr>
+        <tr><td>도록 테이블 ↔ 보조 테이블</td><td>4,200 mm</td><td></td></tr>
+      </table>
+    </section>
+
+    <div class="footer-note">인디자인 포스터 월 시안 이미지(walls/*.png) 기반</div>
+  </aside>
+
+  <main class="stage">
+    <div id="view-layout" class="view-pane active"></div>
+    <div id="view-three" class="view-pane"><div id="three-canvas"></div></div>
+    <div id="loading" class="loading">포스터 데이터를 불러오는 중…</div>
+  </main>
+
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

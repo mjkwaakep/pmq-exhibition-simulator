@@ -9,7 +9,7 @@
 // ============================================================================
 import * as THREE from 'three';
 import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS } from './constants.js';
-import { tableSettings } from './table-settings.js';
+import { tableSettings, bookTableZs } from './table-settings.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
 const fmt = (m) => Math.round(m * 1000).toLocaleString('en-US');
@@ -70,9 +70,9 @@ export function buildDimensions() {
 
   // 도록 테이블 (view-3d.js _buildProps 와 같은 값)
   const ts = tableSettings; // 사이드바 TABLE SIZE 설정(mm)
-  const tLen = ts.bookLen / 1000, tDep = ts.bookDep / 1000, tGap = 1.85, tCx = 20.0, tZ0 = 5.35 + tDep / 2, tH = ts.topH / 1000;
+  const tLen = ts.bookLen / 1000, tDep = ts.bookDep / 1000, tCx = 20.0, tZs = bookTableZs(), tH = ts.topH / 1000;
   const tx1 = tCx - tLen / 2, tx2 = tCx + tLen / 2;
-  const tz = (i) => tZ0 + i * (tDep + tGap);
+  const tz = (i) => tZs[i];
   dim([tx1, tH, tz(0) - tDep / 2], [tx2, tH, tz(0) - tDep / 2], [0, 0, -0.4]);          // 길이
   dim([tx2, tH, tz(0) - tDep / 2], [tx2, tH, tz(0) + tDep / 2], [0.45, 0, 0]);          // 폭
   for (let i = 0; i < 3; i++) dim([tx2, tH, tz(i) + tDep / 2], [tx2, tH, tz(i + 1) - tDep / 2], [0.45, 0, 0]); // 테이블 간격
@@ -161,8 +161,10 @@ export function buildFlow() {
 
   // 도면 기준: 입구(하단 외벽 오른쪽) → 디지털 존 앞 → Wall 03·02를 따라 위로 → Wall 01을 따라
   // 오른쪽으로 → 테이블 사이를 지그재그 → 다시 입구로(출구 = 입구).
-  const tx1 = 15.85, tx2 = 24.15;
-  const aisle = [3.975, 6.775, 9.125, 11.475, 14.15]; // Wall01~테이블1, 테이블 사이 3곳, 테이블4 아래
+  const ts = tableSettings, tx1 = 20.0 - ts.bookLen / 2000, tx2 = 20.0 + ts.bookLen / 2000;
+  const tZs = bookTableZs(), half = ts.bookDep / 2000, wall01Z = WALLS[0].origin.z / 1000;
+  // Wall01~테이블1, 테이블 사이 3곳(가운데가 문과 같은 선), 테이블4 아래
+  const aisle = [(wall01Z + tZs[0] - half) / 2, ...[0, 1, 2].map((i) => (tZs[i] + tZs[i + 1]) / 2), tZs[3] + half + 1.25];
   arrow([[25.5, D - 0.6], [25.5, 15.4]]);                         // 입구 ↑
   arrow([[25.5, aisle[4]], [21.1, aisle[4]]]);                    // 테이블4 아래 ←
   arrow([[tx1 + 0.1, aisle[4]], [18.7, aisle[4]], [18.7, 16.4]]); // 디지털 존으로 ↓

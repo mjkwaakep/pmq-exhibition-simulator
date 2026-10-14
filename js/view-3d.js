@@ -6,7 +6,7 @@ import { OrbitControls } from '../vendor/OrbitControls.js';
 import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS } from './constants.js';
 import { loadWallImage } from './wall-image.js';
 import { buildDimensions, buildFlow, buildSite, buildColumns, buildExitZones } from './site-extras.js';
-import { tableSettings } from './table-settings.js';
+import { tableSettings, bookTableZs } from './table-settings.js';
 
 const MM2M = 0.001;
 // 반투명 벽 뒷면의 A0 액자 이미지(왼쪽 → 오른쪽, 왼쪽 외벽 쪽에서 볼 때).
@@ -246,6 +246,11 @@ export class PosterWall3D {
     this.tablesGroup.visible = tablesVisible;
     this.dimsGroup = buildDimensions(); this.scene.add(this.dimsGroup);
     this.dimsGroup.visible = dimsVisible;
+    // 동선 화살표도 테이블 사이 통로를 따라가므로 같이 다시 그린다.
+    const flowVisible = this.flowGroup.visible;
+    dispose(this.flowGroup);
+    this.flowGroup = buildFlow(); this.scene.add(this.flowGroup);
+    this.flowGroup.visible = flowVisible;
   }
 
   // Wall01 입면 이미지를 현재 전시 버전에 맞게 바꿔 끼운다.
@@ -553,12 +558,12 @@ export class PosterWall3D {
     // 도록 테이블: 기본 8,300 × 500mm 4개. Wall01(x 11.5~28.5m)의 가운데(x=20m)에 맞춰 나란히 놓고
     // 테이블 사이(가장자리 기준) 간격은 1,850mm.
     const tableTopH = ts.topH * MM2M, tableThick = 0.04, tableDepth = ts.bookDep * MM2M;
-    const tableLen = ts.bookLen * MM2M, tableGap = 1.85, tableCount = 4;
-    const tableCx = 20.0, tableZ0 = 5.35 + tableDepth / 2; // Wall01(z=2.6) ↔ 첫 테이블 가장자리 2,750mm
-    const tableRuns = Array.from({ length: tableCount }, (_, i) => ({
+    const tableLen = ts.bookLen * MM2M;
+    const tableCx = 20.0, tableZs = bookTableZs(); // Wall02·03 사이 문을 기준으로 위아래 2개씩
+    const tableRuns = tableZs.map((z) => ({
       x1: tableCx - tableLen / 2,
       x2: tableCx + tableLen / 2,
-      z: tableZ0 + i * (tableDepth + tableGap),
+      z,
       depth: tableDepth,
     }));
     // 보조 테이블: 1,200 × 500mm 4개. Wall01 맞은편(하단 외벽) 쪽에 벽과 나란히 한 줄로 놓는다.

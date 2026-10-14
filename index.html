@@ -101,7 +101,8 @@
     <section class="ctrl-group">
       <div class="ctrl-label">TABLE SIZE</div>
       <table class="wall-table">
-        <tr><td>도록 테이블 <em>4개</em></td><td><input type="number" class="tbl-input" data-table="bookLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="bookDep" step="50" inputmode="numeric" /> mm</td></tr>
+        <tr><td>도록 테이블 <em>4개 · 문 기준 위아래 2개씩</em></td><td><input type="number" class="tbl-input" data-table="bookLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="bookDep" step="50" inputmode="numeric" /> mm</td></tr>
+        <tr><td>도록 테이블 가운데 통로 <em>Wall02·03 사이 문과 같은 선</em></td><td><input type="number" class="tbl-input" data-table="bookAisle" step="50" inputmode="numeric" /> mm</td></tr>
         <tr><td>보조 테이블 <em>4개</em></td><td><input type="number" class="tbl-input" data-table="sideLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="sideDep" step="50" inputmode="numeric" /> mm</td></tr>
         <tr><td>보조 테이블 간격</td><td><input type="number" class="tbl-input" data-table="sideGap" step="50" inputmode="numeric" /> mm</td></tr>
         <tr><td>리플렛 테이블 <em>창 쪽 1개 · 둥근 모서리 R350</em></td><td><input type="number" class="tbl-input" data-table="leafLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="leafWid" step="50" inputmode="numeric" /> mm</td></tr>
@@ -120,12 +121,12 @@
         <tr><td>Wall01 ↔ 전면 창</td><td><span id="space-wall01-window"></span> mm</td><td></td></tr>
         <tr><td>Wall01 ↔ 상단 외벽</td><td>2,600 mm</td><td></td></tr>
         <tr><td>Wall03 ↔ 하단 외벽</td><td><span id="space-wall03-bottom"></span> mm</td><td></td></tr>
-        <tr><td>테이블 ↔ 테이블</td><td>1,850 mm</td><td></td></tr>
+        <tr><td>도록 테이블 ↔ 테이블 <em>같은 묶음 안</em></td><td>1,850 mm</td><td></td></tr>
         <tr><td>Wall02·03 ↔ 도록 테이블</td><td>4,350 mm</td><td></td></tr>
         <tr><td>컴퓨터 벽 ↔ 하단 외벽 <em>기둥 끝 선</em></td><td>1,310 mm</td><td></td></tr>
         <tr><td>보조 테이블 ↔ 컴퓨터 벽</td><td>150 mm</td><td></td></tr>
-        <tr><td>Wall01 ↔ 도록 테이블</td><td>2,750 mm</td><td></td></tr>
-        <tr><td>도록 테이블 ↔ 보조 테이블</td><td>5,040 mm</td><td></td></tr>
+        <tr><td>Wall01 ↔ 도록 테이블</td><td><span id="space-wall01-book"></span> mm</td><td></td></tr>
+        <tr><td>도록 테이블 ↔ 보조 테이블</td><td><span id="space-book-side"></span> mm</td><td></td></tr>
       </table>
     </section>
 

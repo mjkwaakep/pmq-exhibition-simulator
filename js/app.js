@@ -2,7 +2,7 @@ import { WALLS, POSTER_SIZES, ROOM_WIDTH_MM, ROOM_DEPTH_MM } from './constants.j
 import { buildLayout, countsSummary, autoFillWallCounts } from './pack.js';
 import { renderLayoutView } from './view-layout.js';
 import { PosterWall3D } from './view-3d.js';
-import { tableSettings, TABLE_LIMITS, setTableValue, resetTableSettings } from './table-settings.js';
+import { tableSettings, TABLE_LIMITS, setTableValue, resetTableSettings, bookTableZs } from './table-settings.js';
 import { WALL_HEIGHT_LIMITS, getWallGap, setWallHeight, setWallLength, setWallGap, resetWallSizes } from './wall-settings.js';
 
 const state = {
@@ -214,6 +214,15 @@ function wireSceneToggles() {
 }
 
 // TABLE SIZE 입력 — 값이 바뀌면 3D 테이블·치수선을 다시 짓는다.
+// SPACE 표에서 테이블 위치에 따라 바뀌는 거리 두 줄.
+function updateSpaceRows() {
+  const fmt = (m) => Math.round(m * 1000).toLocaleString('en-US');
+  const zs = bookTableZs(), half = tableSettings.bookDep / 2000;
+  const sideTop = ROOM_DEPTH_MM / 1000 - 1.31 - 0.1 - 0.15 - tableSettings.sideDep / 1000; // view-3d.js _buildProps와 같은 값
+  document.getElementById('space-wall01-book').textContent = fmt(zs[0] - half - WALLS[0].origin.z / 1000);
+  document.getElementById('space-book-side').textContent = fmt(sideTop - zs[3] - half);
+}
+
 // (소개 벽·서문 벽 입력칸은 WALL SIZE 표에 있지만 같은 설정 객체를 쓰므로 여기서 함께 묶는다.)
 let syncTableInputs = () => {};
 function wireTableSettings() {
@@ -224,12 +233,14 @@ function wireTableSettings() {
     input.min = min; input.max = max;
     input.addEventListener('change', () => {
       input.value = setTableValue(input.dataset.table, input.value);
+      updateSpaceRows();
       if (three) three.rebuildTables();
     });
   });
   document.getElementById('btn-table-reset').addEventListener('click', () => {
     resetTableSettings();
     sync();
+    updateSpaceRows();
     if (three) three.rebuildTables();
   });
   sync();
@@ -252,7 +263,8 @@ function wireWallSizes() {
     document.getElementById('space-wall01-window').textContent = fmt(ROOM_WIDTH_MM - w1.origin.x - w1.lengthMM);
     document.getElementById('space-wall03-bottom').textContent = fmt(ROOM_DEPTH_MM - w3.origin.z - w3.lengthMM);
   };
-  const apply = () => { sync(); recompute(); if (three) three.rebuildDimensions(); };
+  // 도록 테이블은 Wall02·03 사이 문을 기준으로 놓이므로 벽 크기가 바뀌면 테이블·동선도 다시 짓는다.
+  const apply = () => { sync(); updateSpaceRows(); recompute(); if (three) three.rebuildTables(); };
   heights.forEach((input) => {
     [input.min, input.max] = WALL_HEIGHT_LIMITS;
     input.addEventListener('change', () => { setWallHeight(input.dataset.wallHeight, input.value); apply(); });
@@ -284,6 +296,7 @@ async function main() {
   wireSceneToggles();
   wireTableSettings();
   wireWallSizes();
+  updateSpaceRows();
   await loadPool();
 
   // 기본값: 3벽 모두 "꽉 채우기" 결과로 시작 (레퍼런스처럼 A0/A1/A2가 고르게 섞여 촘촘하게 채워짐)

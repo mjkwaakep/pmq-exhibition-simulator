@@ -268,12 +268,12 @@ export class PosterWall3D {
     });
   }
 
-  // A0 액자를 벽 뒷면(로컬 +Z, 금속 프레임이 있는 쪽)에 액자 사이 1,500mm 간격으로 건다.
+  // A0 액자를 벽 뒷면(로컬 +Z, 금속 프레임이 있는 쪽)에 액자 사이 1,200mm 간격으로 건다.
   // 통로(Wall02·03 사이)에 가장 가까운 액자를 기준으로 고정하고 나머지는 통로 반대쪽으로 늘어놓는다 —
   // Wall02는 끝(통로 쪽)에서, Wall03은 시작점(통로 쪽)에서 기준 액자 중심까지 BACK_FRAME_ANCHOR[m].
   // 액자 중심 높이는 1,350mm(벽 높이 2,200에서 위로 약 220mm 여유). 이미지는 벽 시작점 쪽부터 순서대로.
   _buildBackFrames(group, files, Lm, depth, anchor) {
-    const imgW = 0.841, imgH = 1.189, border = 0.025, deep = 0.03, cy = 1.35, gap = 1.5;
+    const imgW = 0.841, imgH = 1.189, border = 0.025, deep = 0.03, cy = 1.35, gap = 1.2;
     const step = imgW + border * 2 + gap;
     const z0 = depth / 2 + 0.045; // 벽 뒷면의 금속 프레임 바깥
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x2d2725, roughness: 0.5, metalness: 0.3 });

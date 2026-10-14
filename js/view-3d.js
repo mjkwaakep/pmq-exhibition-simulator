@@ -866,14 +866,19 @@ export class PosterWall3D {
   // ㄱ자 구조: Wall01(화이트월, z=2, x 10~25) + Wall02(x=10, z 2~9) + 통로(2m) + Wall03(x=10, z 11~19)
   // 안쪽(사람이 서는 곳)은 x>10, z>2 쪽(전면 창·하단 외벽 방향). "정면"=Wall01, "왼쪽"=Wall02, "오른쪽"=Wall03.
   goTo(preset) {
+    const cx = ROOM_W / 2, cz = ROOM_D / 2;
+    const ix = 13, iz = 11, iy = Math.hypot(ix, iz) + 0.5; // 수평 거리 = 높이 → 45도
     const presets = {
-      full:  { pos: [28.5, 12, 18], target: [18.5, 1.8, 9] },
+      // 스케치업식 기본 뷰: 탑뷰 + 네 모서리에서 45도로 내려다보는 뷰. 방 중심(cx, cz)을 바라본다.
+      top:   { pos: [cx, 29, cz + 0.01], target: [cx, 0, cz] }, // 평면도 방향 — 화면 위가 상단 외벽, 오른쪽이 전면 창
+      isoNW: { pos: [cx - ix, iy, cz - iz], target: [cx, 0.5, cz] }, // 왼쪽 위 모서리에서
+      isoNE: { pos: [cx + ix, iy, cz - iz], target: [cx, 0.5, cz] }, // 오른쪽 위(창 쪽)
+      isoSW: { pos: [cx - ix, iy, cz + iz], target: [cx, 0.5, cz] }, // 왼쪽 아래
+      isoSE: { pos: [cx + ix, iy, cz + iz], target: [cx, 0.5, cz] }, // 오른쪽 아래(입구 쪽)
       front: { pos: [20, 2.1, 8], target: [20, 1.25, 2] },
-      left:  { pos: [21, 2.1, 5.5], target: [11.5, 1.25, 5.5] },
-      right: { pos: [21, 2.1, 15], target: [11.5, 1.25, 15] },
       entrance: { pos: [26.3, 1.6, 19.6], target: [20, 1.3, 13.0] }, // 전시 입구에 서서 서문 벽과 전시장 안쪽을 바라본 시점
     };
-    const p = presets[preset] || presets.full;
+    const p = presets[preset] || presets.isoSE;
     this._tween = { from: this.camera.position.clone(), to: new THREE.Vector3(...p.pos), fromT: this.controls.target.clone(), toT: new THREE.Vector3(...p.target), t: 0 };
   }
 

@@ -91,6 +91,7 @@ body {
 .action-btn.primary:hover { filter: brightness(1.06); }
 
 .cam-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cam-btn.cam-wide { grid-column: 1 / -1; }
 .cam-btn {
   padding: 8px 4px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2);
   color: var(--text); font-size: 11.5px; cursor: pointer;

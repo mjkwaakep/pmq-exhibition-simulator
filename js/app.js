@@ -58,7 +58,7 @@ function renderActiveView() {
 function ensureThree() {
   if (three) return;
   three = new PosterWall3D(document.getElementById('three-canvas'));
-  three.goTo('full');
+  three.goTo('isoSE');
 }
 
 // ---------------- Per-wall poster-count panel ----------------

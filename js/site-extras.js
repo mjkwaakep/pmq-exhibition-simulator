@@ -92,7 +92,7 @@ export function buildDimensions() {
   dim([ix1, introH, introFaceZ], [ix2, introH, introFaceZ], [0, 0.3, 0]);               // 소개 벽 길이
   dim([ix1, 0, introFaceZ], [ix1, introH, introFaceZ], [-0.35, 0, 0]);                  // 소개 벽 높이
   // 서문 벽(소개 벽 입구 쪽 끝에서 직각)
-  const pLen = ts.prefaceLen / 1000, pH = ts.prefaceH / 1000, pX = ix2 + introT;
+  const pLen = ts.prefaceLen / 1000, pH = ts.prefaceH / 1000, pX = ix2;
   dim([pX, pH, introFaceZ - pLen], [pX, pH, introFaceZ], [0, 0.3, 0]);                  // 서문 벽 길이
   dim([pX, 0, introFaceZ - pLen], [pX, pH, introFaceZ - pLen], [0, 0, -0.35]);          // 서문 벽 높이
   dim([tx2, 0.03, tz(3) + tDep / 2], [tx2, 0.03, sZ - sDep / 2], [1.1, 0, 0]);          // 도록 ↔ 보조 테이블

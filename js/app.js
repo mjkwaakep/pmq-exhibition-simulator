@@ -214,9 +214,11 @@ function wireSceneToggles() {
 }
 
 // TABLE SIZE 입력 — 값이 바뀌면 3D 테이블·치수선을 다시 짓는다.
+// (소개 벽·서문 벽 입력칸은 WALL SIZE 표에 있지만 같은 설정 객체를 쓰므로 여기서 함께 묶는다.)
+let syncTableInputs = () => {};
 function wireTableSettings() {
   const inputs = [...document.querySelectorAll('.tbl-input[data-table]')];
-  const sync = () => inputs.forEach((input) => { input.value = tableSettings[input.dataset.table]; });
+  const sync = syncTableInputs = () => inputs.forEach((input) => { input.value = tableSettings[input.dataset.table]; });
   inputs.forEach((input) => {
     const [min, max] = TABLE_LIMITS[input.dataset.table];
     input.min = min; input.max = max;
@@ -259,7 +261,13 @@ function wireWallSizes() {
     input.addEventListener('change', () => { setWallLength(input.dataset.wallLength, input.value); apply(); });
   });
   gap.addEventListener('change', () => { setWallGap(gap.value); apply(); });
-  document.getElementById('btn-wall-reset').addEventListener('click', () => { resetWallSizes(); apply(); });
+  document.getElementById('btn-wall-reset').addEventListener('click', () => {
+    resetWallSizes();
+    resetTableSettings(true); // 소개 벽·서문 벽
+    syncTableInputs();
+    apply();
+    if (three) three.rebuildTables();
+  });
   sync();
 }
 

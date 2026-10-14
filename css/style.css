@@ -115,14 +115,14 @@ body {
 .wall-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 .wall-table td { padding: 4px 2px; border-bottom: 1px solid var(--line); }
 .wall-table td:first-child { color: var(--text-dim); }
-.wall-table td:nth-child(2) { text-align: right; font-variant-numeric: tabular-nums; }
-.wall-table .tag { font-size: 9.5px; padding: 1px 6px; border-radius: 20px; text-align: center; }
+.wall-table td:nth-child(2) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wall-table .tag { font-size: 9.5px; padding: 1px 6px; border-radius: 20px; text-align: center; white-space: nowrap; }
 .wall-table .tag.opaque { background: rgba(232,115,74,.18); color: #f0916c; }
 .wall-table .tag.translucent { background: rgba(111,168,220,.18); color: #8fc0ec; }
 .wall-table .total-row td { font-weight: 700; color: var(--text); border-bottom: none; padding-top: 8px; }
 .wall-table em { display: block; font-style: normal; color: #666a70; font-size: 9px; }
 .tbl-input {
-  width: 54px; padding: 3px 4px; text-align: right; font: inherit; font-variant-numeric: tabular-nums;
+  width: 50px; padding: 3px 4px; text-align: right; font: inherit; font-variant-numeric: tabular-nums;
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; color: var(--text);
   -moz-appearance: textfield; appearance: textfield;
 }

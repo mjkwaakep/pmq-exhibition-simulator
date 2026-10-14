@@ -41,8 +41,11 @@ export function setTableValue(key, value) {
   return tableSettings[key];
 }
 
-export function resetTableSettings() {
-  Object.assign(tableSettings, TABLE_DEFAULTS);
+// 사이드바에서 소개 벽·서문 벽은 WALL SIZE에, 나머지는 TABLE SIZE에 있다 — 되돌리기 버튼도 따로 논다.
+export const WALL_KEYS = ['introLen', 'introH', 'prefaceLen', 'prefaceH'];
+
+export function resetTableSettings(walls = false) {
+  Object.keys(TABLE_DEFAULTS).forEach((k) => { if (WALL_KEYS.includes(k) === walls) tableSettings[k] = TABLE_DEFAULTS[k]; });
   saveTableSettings();
 }
 

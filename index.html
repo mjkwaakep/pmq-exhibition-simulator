@@ -86,7 +86,9 @@
         <tr><td>Wall 02 <em>반투명 1</em></td><td><input type="number" class="tbl-input" data-wall-length="wall02" step="100" inputmode="numeric" /> × <input type="number" class="tbl-input" data-wall-height="wall02" step="50" inputmode="numeric" /> mm</td><td class="tag translucent">반투명</td></tr>
         <tr><td>통로 <em>Wall02·03 사이</em></td><td><input type="number" class="tbl-input" id="wall-gap" step="100" inputmode="numeric" /> mm</td><td></td></tr>
         <tr><td>Wall 03 <em>반투명 2</em></td><td><input type="number" class="tbl-input" data-wall-length="wall03" step="100" inputmode="numeric" /> × <input type="number" class="tbl-input" data-wall-height="wall03" step="50" inputmode="numeric" /> mm</td><td class="tag translucent">반투명</td></tr>
-        <tr class="total-row"><td>TOTAL</td><td><span id="wall-total"></span> mm</td><td></td></tr>
+        <tr class="total-row"><td>TOTAL <em>Wall 01~03 + 통로</em></td><td><span id="wall-total"></span> mm</td><td></td></tr>
+        <tr><td>전시 소개 벽 <em>컴퓨터 뒤 가벽</em></td><td><input type="number" class="tbl-input" data-table="introLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="introH" step="50" inputmode="numeric" /> mm</td><td class="tag translucent">반투명</td></tr>
+        <tr><td>서문 벽 <em>소개 벽 끝에서 직각</em></td><td><input type="number" class="tbl-input" data-table="prefaceLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="prefaceH" step="50" inputmode="numeric" /> mm</td><td class="tag opaque">불투명</td></tr>
       </table>
       <button class="tbl-reset" id="btn-wall-reset">벽 크기 기본값으로 되돌리기</button>
       <div class="wall-shape-note">길이 × 높이와 통로 폭을 바꾸면 LAYOUT·3D에 바로 반영됩니다. 포스터 시안은 원래 크기 그대로 벽 시작점·바닥에 맞춰 두고, 벽이 작아지면 넘치는 부분이 잘립니다.</div>
@@ -101,12 +103,10 @@
         <tr><td>보조 테이블 간격</td><td><input type="number" class="tbl-input" data-table="sideGap" step="50" inputmode="numeric" /> mm</td></tr>
         <tr><td>리플렛 테이블 <em>창 쪽 1개 · 둥근 모서리 R350</em></td><td><input type="number" class="tbl-input" data-table="leafLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="leafWid" step="50" inputmode="numeric" /> mm</td></tr>
         <tr><td>상판 높이</td><td><input type="number" class="tbl-input" data-table="topH" step="50" inputmode="numeric" /> mm</td></tr>
-        <tr><td>전시 소개 벽 <em>보조 테이블 뒤 · 길이 × 높이</em></td><td><input type="number" class="tbl-input" data-table="introLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="introH" step="50" inputmode="numeric" /> mm</td></tr>
-        <tr><td>서문 벽 <em>소개 벽 입구 쪽 끝에서 직각 · 길이 × 높이</em></td><td><input type="number" class="tbl-input" data-table="prefaceLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="prefaceH" step="50" inputmode="numeric" /> mm</td></tr>
         <tr><td>iMac 24" <em>보조 테이블마다 1대</em></td><td>547 × 461 × 147 mm</td></tr>
       </table>
       <button class="tbl-reset" id="btn-table-reset">기본값으로 되돌리기</button>
-      <div class="wall-shape-note">숫자를 바꾸면 3D 뷰의 테이블·소개 벽과 치수선에 바로 반영됩니다(이 브라우저에 저장). 소개 벽 높이를 1,400 정도로 낮추면 iMac 뒷면만 가리는 파티션이 됩니다.</div>
+      <div class="wall-shape-note">숫자를 바꾸면 3D 뷰의 테이블과 치수선에 바로 반영됩니다(이 브라우저에 저장).</div>
     </section>
 
     <section class="ctrl-group">

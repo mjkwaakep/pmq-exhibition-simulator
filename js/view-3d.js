@@ -128,9 +128,15 @@ export class PosterWall3D {
   // 전시 소개 벽(입구에서 바로 보이는 타이틀 월). 입구 쪽(+Z) 면에 타이틀 그래픽을 붙인다.
   _buildIntroWall(cx, cz, len, h, t) {
     const g = new THREE.Group();
+    // Wall02·03과 같은 반투명 골판 패널(setWalls의 재질과 같은 값).
+    const ribTex = makeRibTexture();
+    ribTex.repeat.set(Math.max(4, len * 1000 / 120), 1);
     const body = new THREE.Mesh(
       new THREE.BoxGeometry(len, h, t),
-      new THREE.MeshStandardMaterial({ color: 0xf4f3ef, roughness: 0.9 })
+      new THREE.MeshPhysicalMaterial({
+        color: 0xdcecf0, roughness: 0.28, metalness: 0, transmission: 0.68, thickness: 0.12, ior: 1.4,
+        transparent: true, opacity: 0.5, map: ribTex, side: THREE.DoubleSide,
+      })
     );
     body.position.set(cx, h / 2, cz);
     body.castShadow = true; body.receiveShadow = true;
@@ -145,7 +151,7 @@ export class PosterWall3D {
     tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
     const draw = () => {
       const W = c.width, H = c.height;
-      ctx.fillStyle = '#f4f3ef'; ctx.fillRect(0, 0, W, H);
+      ctx.clearRect(0, 0, W, H); // 바탕은 투명 — 반투명 패널 위에 글자만 얹는다
       ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const sans = '-apple-system, "Apple SD Gothic Neo", "Helvetica Neue", Arial, sans-serif';
       ctx.font = `700 ${H * 0.115}px ${sans}`; ctx.fillText('일상의 실천', W * 0.5, H * 0.2);
@@ -154,7 +160,7 @@ export class PosterWall3D {
       tex.needsUpdate = true;
     };
     draw();
-    const face = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9, transparent: true, alphaTest: 0.3 }));
     face.position.set(cx, h / 2, cz + t / 2 + 0.002); // +Z 면(하단 외벽·입구 쪽)
     g.add(face);
     this.scene.add(g);

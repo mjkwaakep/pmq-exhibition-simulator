@@ -9,6 +9,11 @@ import { buildDimensions, buildFlow, buildSite, buildColumns, buildExitZones } f
 import { tableSettings } from './table-settings.js';
 
 const MM2M = 0.001;
+// 반투명 벽 뒷면의 A0 액자 이미지(왼쪽 → 오른쪽, 왼쪽 외벽 쪽에서 볼 때).
+const BACK_FRAMES = {
+  wall02: ['frames/back-1.jpg', 'frames/back-2.jpg', 'frames/back-3.jpg'],
+  wall03: ['frames/back-4.jpg', 'frames/back-5.jpg', 'frames/back-6.jpg'],
+};
 // 벽 시안 이미지에서 실제 벽 크기에 해당하는 부분만 보이게 한다(setPosters가 crop을 계산해 둔다).
 function applyCrop(tex, mat) {
   const { u, v, offsetU } = mat.userData.crop;
@@ -258,6 +263,23 @@ export class PosterWall3D {
       f.faceMat.map = tex;
       f.faceMat.visible = true;
       f.faceMat.needsUpdate = true;
+    });
+  }
+
+  // A0 액자를 벽 뒷면(로컬 +Z, 금속 프레임이 있는 쪽)에 벽 길이를 3등분한 자리마다 하나씩 건다.
+  // 액자 중심 높이는 1,350mm(벽 높이 2,200에서 위로 약 220mm 여유). 이미지는 벽 시작점 쪽부터 순서대로.
+  _buildBackFrames(group, files, Lm, depth) {
+    const imgW = 0.841, imgH = 1.189, border = 0.025, deep = 0.03, cy = 1.35;
+    const z0 = depth / 2 + 0.045; // 벽 뒷면의 금속 프레임 바깥
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x2d2725, roughness: 0.5, metalness: 0.3 });
+    files.forEach((file, i) => {
+      const cx = Lm * (i + 0.5) / files.length;
+      const box = new THREE.Mesh(new THREE.BoxGeometry(imgW + border * 2, imgH + border * 2, deep), frameMat);
+      box.position.set(cx, cy, z0 + deep / 2);
+      group.add(box);
+      const art = new THREE.Mesh(new THREE.PlaneGeometry(imgW, imgH), new THREE.MeshStandardMaterial({ map: loadTex(file), roughness: 0.6 }));
+      art.position.set(cx, cy, z0 + deep + 0.001);
+      group.add(art);
     });
   }
 
@@ -782,6 +804,9 @@ export class PosterWall3D {
       }
       group.userData.posterGroup = new THREE.Group();
       group.add(group.userData.posterGroup);
+
+      // Wall02·03 뒷면(왼쪽 외벽 쪽)에 거는 A0 액자 — 부산현대미술관 '시대정신' 벽 시안의 포스터 6장.
+      if (BACK_FRAMES[wall.id]) this._buildBackFrames(group, BACK_FRAMES[wall.id], Lm, depth);
 
       this.scene.add(group);
       this._wallMeshes.push(group);

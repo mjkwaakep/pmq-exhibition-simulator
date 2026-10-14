@@ -13,10 +13,10 @@ import { tableSettings } from './table-settings.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
 const fmt = (m) => Math.round(m * 1000).toLocaleString('en-US');
-const TEXT_LABEL_SIZE = 0.0105; // 3D 안의 글자 라벨(영어 표기)은 치수 숫자(0.015)의 70% 크기
+const TEXT_LABEL_SIZE = 0.0105; // 3D 안의 글자 라벨(영어 표기) — 치수 숫자와 같은 크기
 
 /** 항상 카메라를 바라보고 화면상 크기가 일정한 글자 라벨. */
-function makeLabel(text, { fg = '#ffffff', size = 0.015 } = {}) {
+function makeLabel(text, { fg = '#ffffff', size = 0.0105 } = {}) { // 치수 숫자 기본 크기(처음 0.015의 70%)
   // 박스 없이 글자만 — 어두운 카펫과 흰 벽 어디서도 읽히도록 얇은 어두운 외곽선을 두른다.
   const font = '500 44px "Helvetica Neue", Helvetica, Arial, sans-serif'; // Helvetica Medium
   const c = document.createElement('canvas');
@@ -130,7 +130,7 @@ export function buildFlow() {
   // 바닥에 깔리는 점선 + 끝 화살촉. path = [[x,z], ...]
   const arrow = (path, color = 0xff3b30) => {
     const m = mat(color);
-    const headL = 0.55, headW = 0.26, lineW = 0.08, dash = 0.42, gapL = 0.26;
+    const headL = 0.3, headW = 0.11, lineW = 0.03, dash = 0.28, gapL = 0.2; // 가늘고 작게(이전: 0.55 · 0.26 · 0.08)
     for (let i = 0; i < path.length - 1; i++) {
       const a = new THREE.Vector2(...path[i]), b = new THREE.Vector2(...path[i + 1]);
       const last = i === path.length - 2;

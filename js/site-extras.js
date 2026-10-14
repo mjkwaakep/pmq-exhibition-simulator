@@ -321,7 +321,7 @@ export function buildSite() {
   curtain(W - pierW - doorX2, (doorX2 + W - pierW) / 2, D - 0.07, Math.PI);       // 하단 외벽(문 오른쪽)
   curtain(D, 0.07, D / 2, Math.PI / 2);                                           // 왼쪽 외벽
 
-  // 출입문: 유리문 두 짝 + 초록 EXIT 표시
+  // 출입문: 유리 양여닫이문 두 짝을 바깥(로비 쪽, +Z)으로 90도 활짝 열어 둔다 + 초록 EXIT 표시
   const frameMat = new THREE.MeshStandardMaterial({ color: 0xb9bdc0, roughness: 0.4, metalness: 0.6 });
   const doorGlass = new THREE.MeshStandardMaterial({ color: 0xcfd6d8, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.55 });
   const doorH = 2.3, doorW = doorX2 - doorX1;
@@ -329,19 +329,25 @@ export function buildSite() {
   wallAbove.rotation.y = Math.PI;
   wallAbove.position.set((doorX1 + doorX2) / 2, doorH + (curtainH - doorH) / 2, D - 0.05);
   perim.add(wallAbove);
-  for (let i = 0; i < 4; i++) {
-    const lw = doorW / 4, x = doorX1 + lw * (i + 0.5);
-    const leaf = new THREE.Mesh(new THREE.PlaneGeometry(lw - 0.08, doorH - 0.08), doorGlass);
-    leaf.rotation.y = Math.PI;
-    leaf.position.set(x, doorH / 2, D - 0.05);
+  const leafW = doorW / 2 - 0.04;
+  [[doorX1, 1], [doorX2, -1]].forEach(([hx, dir]) => {
+    // 경첩 쪽 기둥에 붙어 바깥으로 열린 문짝(유리 + 테두리)
+    const leaf = new THREE.Group();
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(leafW - 0.08, doorH - 0.08), doorGlass);
+    glass.position.set(0, doorH / 2, 0);
+    leaf.add(glass);
+    [[leafW, 0.04, 0, doorH - 0.02], [leafW, 0.04, 0, 0.02], [0.04, doorH, -leafW / 2 + 0.02, doorH / 2], [0.04, doorH, leafW / 2 - 0.02, doorH / 2]].forEach(([w, h, x, y]) => {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.04), frameMat);
+      bar.position.set(x, y, 0);
+      leaf.add(bar);
+    });
+    leaf.rotation.y = -dir * Math.PI / 2;                // 바깥(+Z)으로 90도
+    leaf.position.set(hx + dir * 0.03, 0, D + leafW / 2 + 0.03);
     perim.add(leaf);
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, doorH, 0.06), frameMat);
-    post.position.set(doorX1 + lw * i, doorH / 2, D - 0.05);
+    post.position.set(hx, doorH / 2, D - 0.05);
     perim.add(post);
-  }
-  const postEnd = new THREE.Mesh(new THREE.BoxGeometry(0.05, doorH, 0.06), frameMat);
-  postEnd.position.set(doorX2, doorH / 2, D - 0.05);
-  perim.add(postEnd);
+  });
   const lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW, 0.06, 0.06), frameMat);
   lintel.position.set((doorX1 + doorX2) / 2, doorH, D - 0.05);
   perim.add(lintel);

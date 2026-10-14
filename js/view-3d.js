@@ -482,12 +482,37 @@ export class PosterWall3D {
     this.scene.add(topWall);
 
     // 하단 외벽 (z=ROOM_D, 법선 -Z) — Wall03 끝 쪽
-    const bottomWall = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_W, ceilingY), plainMat);
-    bottomWall.rotation.y = Math.PI;
-    bottomWall.position.set(ROOM_W / 2, ceilingY / 2, ROOM_D);
-    bottomWall.receiveShadow = true;
-    this.scene.add(bottomWall);
-    this._outerWalls = [leftWall, topWall, bottomWall];
+    // 출입구(Staunton, x 24.8~27.8m · 높이 2.3m — site-extras.js의 문과 같은 값)는 뚫어 두고, 문 밖에 로비를 조금 만든다.
+    const doorX1 = 24.8, doorX2 = 27.8, doorH = 2.3, lobbyD = 3;
+    const wallPiece = (x1, x2, y1, y2) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(x2 - x1, y2 - y1), plainMat);
+      m.rotation.y = Math.PI;
+      m.position.set((x1 + x2) / 2, (y1 + y2) / 2, ROOM_D);
+      m.receiveShadow = true;
+      this.scene.add(m);
+      return m;
+    };
+    const bottomWalls = [
+      wallPiece(0, doorX1, 0, ceilingY),
+      wallPiece(doorX2, ROOM_W, 0, ceilingY),
+      wallPiece(doorX1, doorX2, doorH, ceilingY),
+    ];
+    const lobbyMat = new THREE.MeshStandardMaterial({ color: 0xd9d7d1, roughness: 0.9, side: THREE.DoubleSide });
+    const lobby = new THREE.Group();
+    const lobbyFloor = new THREE.Mesh(new THREE.PlaneGeometry(doorX2 - doorX1 + 1, lobbyD), new THREE.MeshStandardMaterial({ color: 0x8d8b86, roughness: 0.9 }));
+    lobbyFloor.rotation.x = -Math.PI / 2;
+    lobbyFloor.position.set((doorX1 + doorX2) / 2, 0.001, ROOM_D + lobbyD / 2);
+    const lobbyBack = new THREE.Mesh(new THREE.PlaneGeometry(doorX2 - doorX1 + 1, ceilingY), lobbyMat);
+    lobbyBack.position.set((doorX1 + doorX2) / 2, ceilingY / 2, ROOM_D + lobbyD);
+    lobby.add(lobbyFloor, lobbyBack);
+    [doorX1 - 0.5, doorX2 + 0.5].forEach((x) => {
+      const side = new THREE.Mesh(new THREE.PlaneGeometry(lobbyD, ceilingY), lobbyMat);
+      side.rotation.y = Math.PI / 2;
+      side.position.set(x, ceilingY / 2, ROOM_D + lobbyD / 2);
+      lobby.add(side);
+    });
+    this.scene.add(lobby);
+    this._outerWalls = [leftWall, topWall, ...bottomWalls, lobby];
 
     // 전면 창 (x=ROOM_W, 법선 -X) — 바닥부터 천장까지 통유리 커튼월이 아니라,
     // 위/아래에 흰 벽 구조체를 두고 중간 큰 창만 얇은 실버 프레임으로 마감한다.

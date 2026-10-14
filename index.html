@@ -11,7 +11,7 @@
   (function () {
     var v = Date.now();
     var imports = { three: './vendor/three.module.min.js' };
-    ['app', 'constants', 'pack', 'site-extras', 'table-settings', 'view-3d', 'view-layout', 'wall-image', 'wall-settings', 'share'].forEach(function (n) {
+    ['app', 'constants', 'pack', 'site-extras', 'table-settings', 'view-3d', 'view-layout', 'wall-image', 'wall-settings', 'share', 'i18n-en'].forEach(function (n) {
       imports['./js/' + n + '.js'] = './js/' + n + '.js?v=' + v;
     });
     var map = document.createElement('script');

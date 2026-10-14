@@ -4,6 +4,7 @@ import { renderLayoutView } from './view-layout.js';
 import { PosterWall3D } from './view-3d.js';
 import { tableSettings, TABLE_LIMITS, setTableValue, resetTableSettings, bookTableZs } from './table-settings.js';
 import { VIEW_ONLY, VIEW_PARAMS, makeViewLink } from './share.js';
+import { translateToEnglish } from './i18n-en.js';
 import { WALL_HEIGHT_LIMITS, getWallGap, setWallHeight, setWallLength, setWallGap, resetWallSizes } from './wall-settings.js';
 
 const state = {
@@ -289,6 +290,7 @@ function wireWallSizes() {
 function wireViewOnly() {
   if (VIEW_ONLY) {
     document.body.classList.add('view-only');
+    translateToEnglish(); // 기획자 공유용 화면은 메뉴를 영어로
     document.querySelectorAll('.tbl-input').forEach((input) => { input.readOnly = true; input.tabIndex = -1; });
     const ver = document.querySelector(`.ver-btn[data-ver="${VIEW_PARAMS.v}"]`);
     if (ver) ver.click();

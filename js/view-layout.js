@@ -2,6 +2,7 @@
 // LAYOUT VIEW — 투시 없는 정면(입면) 도면. 3개 벽면을 실제 비율로 펼쳐서 보여준다.
 // ============================================================================
 import { GAP_MM, MARGIN } from './constants.js';
+import { VIEW_ONLY } from './share.js';
 import { loadWallImage } from './wall-image.js';
 
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -36,8 +37,8 @@ export function renderLayoutView(container, layout) {
     const placedCount = wall.image ? wall.posterCount : items.length;
     head.innerHTML = `<span class="wall-tag ${wall.material}">${wall.name}</span>
       <span class="wall-dim">${wall.lengthMM.toLocaleString()} × ${wall.heightMM.toLocaleString()} mm</span>
-      <span class="wall-mat">${wall.material === 'opaque' ? '불투명 벽' : '반투명 패널'}</span>
-      <span class="wall-count">포스터 ${placedCount}장</span>`;
+      <span class="wall-mat">${wall.material === 'opaque' ? (VIEW_ONLY ? 'Opaque wall' : '불투명 벽') : (VIEW_ONLY ? 'Translucent panel' : '반투명 패널')}</span>
+      <span class="wall-count">${VIEW_ONLY ? `${placedCount} posters` : `포스터 ${placedCount}장`}</span>`;
     card.appendChild(head);
 
     const svg = el('svg', { width: wPx + 64, height: svgH, viewBox: `0 0 ${wPx + 64} ${svgH}` });

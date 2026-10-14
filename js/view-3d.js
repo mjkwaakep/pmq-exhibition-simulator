@@ -3,7 +3,7 @@
 // ============================================================================
 import * as THREE from 'three';
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM } from './constants.js';
+import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS } from './constants.js';
 import { loadWallImage } from './wall-image.js';
 import { buildDimensions, buildFlow, buildSite, buildColumns, buildExitZones } from './site-extras.js';
 import { tableSettings } from './table-settings.js';
@@ -868,6 +868,9 @@ export class PosterWall3D {
   goTo(preset) {
     const cx = ROOM_W / 2, cz = ROOM_D / 2;
     const ix = 13, iz = 11, iy = Math.hypot(ix, iz) + 0.5; // 수평 거리 = 높이 → 45도
+    // Wall02·03 사이 통로(반투명 벽의 문) — 벽 길이·통로 폭 설정을 따라간다.
+    const w2 = WALLS[1], w3 = WALLS[2];
+    const doorX = w2.origin.x / 1000, doorZ = (w2.origin.z + w2.lengthMM + w3.origin.z) / 2000;
     const presets = {
       // 스케치업식 기본 뷰: 탑뷰 + 네 모서리에서 45도로 내려다보는 뷰. 방 중심(cx, cz)을 바라본다.
       top:   { pos: [cx, 29, cz + 0.01], target: [cx, 0, cz] }, // 평면도 방향 — 화면 위가 상단 외벽, 오른쪽이 전면 창
@@ -875,7 +878,8 @@ export class PosterWall3D {
       isoNE: { pos: [cx + ix, iy, cz - iz], target: [cx, 0.5, cz] }, // 오른쪽 위(창 쪽)
       isoSW: { pos: [cx - ix, iy, cz + iz], target: [cx, 0.5, cz] }, // 왼쪽 아래
       isoSE: { pos: [cx + ix, iy, cz + iz], target: [cx, 0.5, cz] }, // 오른쪽 아래(입구 쪽)
-      front: { pos: [20, 2.1, 8], target: [20, 1.25, 2] },
+      window: { pos: [ROOM_W - 0.8, 1.6, cz], target: [cx - 2, 1.3, cz] },   // 전면 창 앞에 서서 전시장 쪽을 본 시점
+      door: { pos: [doorX - 1.2, 1.6, doorZ], target: [doorX + 9, 1.3, doorZ] }, // 반투명 벽 통로(문) 바깥에서 전시장 안을 본 시점
       entrance: { pos: [26.3, 1.6, 19.6], target: [20, 1.3, 13.0] }, // 전시 입구에 서서 서문 벽과 전시장 안쪽을 바라본 시점
     };
     const p = presets[preset] || presets.isoSE;

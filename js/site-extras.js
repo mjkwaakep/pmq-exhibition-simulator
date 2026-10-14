@@ -13,6 +13,7 @@ import { tableSettings } from './table-settings.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
 const fmt = (m) => Math.round(m * 1000).toLocaleString('en-US');
+const TEXT_LABEL_SIZE = 0.0105; // 3D 안의 글자 라벨(영어 표기)은 치수 숫자(0.015)의 70% 크기
 
 /** 항상 카메라를 바라보고 화면상 크기가 일정한 글자 라벨. */
 function makeLabel(text, { fg = '#ffffff', size = 0.015 } = {}) {
@@ -181,11 +182,11 @@ export function buildFlow() {
   group.add(spot);
 
   const tag = (text, x, y, z, border) => {
-    const l = makeLabel(text, { fg: border });
+    const l = makeLabel(text, { fg: border, size: TEXT_LABEL_SIZE });
     l.position.set(x, y, z);
     group.add(l);
   };
-  tag('Entrance · Exit (전시 입구 = 출구)', 26.3, 0.6, D - 1.3, '#7dff6b');
+  tag('Entrance · Exit', 26.3, 0.6, D - 1.3, '#7dff6b');
   tag('Entrance to Retail Area', 9.9, 0.6, 5.0, '#8fb4ff');
   return group;
 }
@@ -466,7 +467,7 @@ export function buildExitZones() {
     group.add(plane);
     const a = new THREE.Vector3(x1, Y, z1), b = new THREE.Vector3(x2, Y, z1), c = new THREE.Vector3(x2, Y, z2), d = new THREE.Vector3(x1, Y, z2);
     pts.push(a, b, b, c, c, d, d, a, a, c, b, d); // 테두리 + 도면과 같은 X 표시
-    const label = makeLabel('비상구 확보 구역', { fg: '#ff8a80' });
+    const label = makeLabel('Emergency Exit · Keep Clear', { fg: '#ff8a80', size: TEXT_LABEL_SIZE });
     label.position.set((x1 + x2) / 2, 0.5, (z1 + z2) / 2);
     group.add(label);
   });

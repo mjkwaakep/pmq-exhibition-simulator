@@ -148,20 +148,9 @@ export class PosterWall3D {
       ctx.fillStyle = '#f4f3ef'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const sans = '-apple-system, "Apple SD Gothic Neo", "Helvetica Neue", Arial, sans-serif';
-      // 벽 글자는 전부 영어, 크기는 처음 시안의 70%.
-      ctx.font = `700 ${H * 0.0805}px ${sans}`; ctx.fillText('EVERYDAY PRACTICE', W * 0.5, H * 0.28);
-      ctx.font = `700 ${H * 0.0434}px ${sans}`; ctx.fillText('PMQ   HONG KONG', W * 0.5, H * 0.9);
-      // 크레딧 글줄(자리 표시용 회색 줄)
-      ctx.fillStyle = 'rgba(20,20,20,0.55)';
-      [0.03, 0.17, 0.47, 0.6].forEach((x0, col) => {
-        let y = H * 0.43;
-        for (let i = 0; i < 26; i++) {
-          if (i % 6 === 5) { y += H * 0.022; continue; }
-          const w = W * (0.035 + ((i * 7 + col * 3) % 6) * 0.012);
-          ctx.fillRect(W * x0, y, w, H * 0.005);
-          y += H * 0.013;
-        }
-      });
+      ctx.font = `700 ${H * 0.115}px ${sans}`; ctx.fillText('일상의 실천', W * 0.5, H * 0.2);
+      ctx.font = `700 ${H * 0.115}px ${sans}`; ctx.fillText('EVERYDAY PRACTICE', W * 0.5, H * 0.33);
+      ctx.font = `700 ${H * 0.062}px ${sans}`; ctx.fillText('PMQ   HONG KONG', W * 0.5, H * 0.9);
       tex.needsUpdate = true;
     };
     draw();

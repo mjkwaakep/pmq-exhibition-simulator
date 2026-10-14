@@ -18,7 +18,7 @@ const TEXT_LABEL_SIZE = 0.0105; // 3D 안의 글자 라벨(영어 표기)은 치
 /** 항상 카메라를 바라보고 화면상 크기가 일정한 글자 라벨. */
 function makeLabel(text, { fg = '#ffffff', size = 0.015 } = {}) {
   // 박스 없이 글자만 — 어두운 카펫과 흰 벽 어디서도 읽히도록 얇은 어두운 외곽선을 두른다.
-  const font = '600 44px -apple-system, "Helvetica Neue", Arial, sans-serif';
+  const font = '500 44px "Helvetica Neue", Helvetica, Arial, sans-serif'; // Helvetica Medium
   const c = document.createElement('canvas');
   let ctx = c.getContext('2d');
   ctx.font = font;

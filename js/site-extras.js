@@ -128,9 +128,10 @@ export function buildFlow() {
   const mats = {};
   const mat = (color) => mats[color] || (mats[color] = new THREE.MeshBasicMaterial({ color, fog: false, toneMapped: false, side: THREE.DoubleSide }));
   // 바닥에 깔리는 점선 + 끝 화살촉. path = [[x,z], ...]
-  const arrow = (path, color = 0xff3b30) => {
+  // 빨간 관람 동선은 파란 화살표의 절반 크기로 더 섬세하게 그린다.
+  const arrow = (path, color = 0xff3b30, k = color === 0xff3b30 ? 0.5 : 1) => {
     const m = mat(color);
-    const headL = 0.3, headW = 0.11, lineW = 0.03, dash = 0.28, gapL = 0.2; // 가늘고 작게(이전: 0.55 · 0.26 · 0.08)
+    const headL = 0.3 * k, headW = 0.11 * k, lineW = 0.03 * k, dash = 0.28 * k, gapL = 0.2 * k;
     for (let i = 0; i < path.length - 1; i++) {
       const a = new THREE.Vector2(...path[i]), b = new THREE.Vector2(...path[i + 1]);
       const last = i === path.length - 2;

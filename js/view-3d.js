@@ -602,19 +602,20 @@ export class PosterWall3D {
     const sideZ = introFaceZ - introT - introGap - sideDepth / 2;
     this._buildIntroWall(tableCx, introFaceZ - introT / 2, ts.introLen * MM2M, introH, introT);
     // 서문 벽: 소개 벽의 입구 쪽 끝(+X)에서 90도로 꺾여 전시장 안(-Z)으로 들어온다. 글은 입구 쪽 면(+X)에 올린다.
-    // 바깥 면을 소개 벽의 끝점에 딱 맞춘다(끝 밖으로 튀어나오지 않음). 길이는 소개 벽 뒷면(모서리)에서 잰
-    // 바깥 치수라서, 길이를 바꾸면 모서리는 그대로 있고 전시장 안쪽 끝만 움직인다.
+    // 바깥 면을 소개 벽의 끝점에 딱 맞춘다(끝 밖으로 튀어나오지 않음). 벽은 하단 외벽 쪽 검은 커튼 선
+    // (벽에서 700mm)에서 시작해 전시장 안으로 들어오고, 길이를 바꾸면 커튼 쪽 끝은 그대로, 안쪽 끝만 움직인다.
     {
       const pLen = ts.prefaceLen * MM2M, pH = ts.prefaceH * MM2M;
+      const pStart = ROOM_DEPTH_MM / 1000 - 0.7; // 커튼 선(site-extras.js의 midOff와 같은 값)
       const preface = new THREE.Mesh(
-        new THREE.BoxGeometry(introT, pH, pLen - introT),
+        new THREE.BoxGeometry(introT, pH, pLen),
         new THREE.MeshStandardMaterial({ color: 0xf4f3ef, roughness: 0.9 })
       );
-      preface.position.set(tableCx + ts.introLen * MM2M / 2 - introT / 2, pH / 2, introFaceZ - introT - (pLen - introT) / 2);
+      preface.position.set(tableCx + ts.introLen * MM2M / 2 - introT / 2, pH / 2, pStart - pLen / 2);
       preface.castShadow = true; preface.receiveShadow = true;
       this.introGroup.add(preface);
-      // 입구 쪽 면(+X)에 타이틀과 전시 개요를 올린다. 평면을 +90도 돌리면 왼쪽 끝이 모서리(+Z) 쪽이 된다.
-      const faceLen = pLen - introT;
+      // 입구 쪽 면(+X)에 타이틀과 전시 개요를 올린다. 평면을 +90도 돌리면 왼쪽 끝이 커튼(+Z) 쪽이 된다.
+      const faceLen = pLen;
       const text = new THREE.Mesh(
         new THREE.PlaneGeometry(faceLen, pH),
         new THREE.MeshStandardMaterial({ map: this._makeForewordTexture(faceLen, pH), roughness: 0.9 })

@@ -183,6 +183,18 @@ export class PosterWall3D {
 
   setTablesVisible(v) { if (this.tablesGroup) this.tablesGroup.visible = v; }
 
+  // 벽 높이가 바뀌면 치수선만 다시 긋는다(벽·포스터는 app.js가 setWalls/setPosters로 다시 짓는다).
+  rebuildDimensions() {
+    const visible = this.dimsGroup.visible;
+    this.scene.remove(this.dimsGroup);
+    this.dimsGroup.traverse((o) => {
+      if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); }
+      else if (o.geometry) o.geometry.dispose();
+    });
+    this.dimsGroup = buildDimensions(); this.scene.add(this.dimsGroup);
+    this.dimsGroup.visible = visible;
+  }
+
   // TABLE SIZE 설정(table-settings.js)이 바뀌면 테이블·스툴·아이맥·도록과 치수선을 다시 짓는다.
   rebuildTables() {
     const dispose = (group) => {
@@ -213,6 +225,7 @@ export class PosterWall3D {
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+      tex.repeat.set(1, f.faceMat.userData.cropV);
       if (f.faceMat.map) f.faceMat.map.dispose();
       f.faceMat.map = tex;
       f.faceMat.visible = true;
@@ -714,7 +727,7 @@ export class PosterWall3D {
         this.framesGroup = new THREE.Group();
         this.framesGroup.visible = this._bookVersion === 'a';
         group.add(this.framesGroup);
-        this._buildFrames(Hm);
+        this._buildFrames((wall.imageHeightMM || wall.heightMM) * MM2M); // 액자는 시안 이미지 위치를 따른다
       }
       group.userData.posterGroup = new THREE.Group();
       group.add(group.userData.posterGroup);
@@ -745,8 +758,12 @@ export class PosterWall3D {
       // 시안 이미지가 있는 벽: 입면 이미지 한 장을 벽 전면에 그대로 붙인다. flip 벽은
       // 평면을 180도 돌려 붙이므로 안쪽에서 볼 때 이미지가 좌우 반전 없이 보인다.
       if (wall.image) {
-        const Lm = wall.lengthMM * MM2M, Hm = wall.heightMM * MM2M;
+        // 이미지는 시안 기준 높이(imageHeightMM)대로 바닥에 맞춰 붙인다. 벽이 더 높으면 위가 비고,
+        // 더 낮으면 이미지 윗부분을 잘라낸다(cropV = 보이는 비율) — 늘이거나 줄이지 않는다.
+        const Lm = wall.lengthMM * MM2M, imgH = (wall.imageHeightMM || wall.heightMM) * MM2M;
+        const Hm = Math.min(wall.heightMM * MM2M, imgH);
         const faceMat = new THREE.MeshStandardMaterial({ roughness: 0.75, metalness: 0, alphaTest: 0.5, visible: false });
+        faceMat.userData.cropV = Hm / imgH;
         const face = new THREE.Mesh(new THREE.PlaneGeometry(Lm, Hm), faceMat);
         face.position.set(Lm / 2, Hm / 2, sign * 0.065);
         face.rotation.y = rotY;
@@ -761,6 +778,7 @@ export class PosterWall3D {
           const tex = new THREE.CanvasTexture(canvas);
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+          tex.repeat.set(1, faceMat.userData.cropV);
           faceMat.map = tex;
           faceMat.visible = true;
           faceMat.needsUpdate = true;

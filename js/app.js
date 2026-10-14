@@ -3,6 +3,7 @@ import { buildLayout, countsSummary, autoFillWallCounts } from './pack.js';
 import { renderLayoutView } from './view-layout.js';
 import { PosterWall3D } from './view-3d.js';
 import { tableSettings, TABLE_LIMITS, setTableValue, resetTableSettings } from './table-settings.js';
+import { WALL_HEIGHT_LIMITS, setWallHeight, resetWallHeights } from './wall-settings.js';
 
 const state = {
   pool: [],
@@ -214,7 +215,7 @@ function wireSceneToggles() {
 
 // TABLE SIZE 입력 — 값이 바뀌면 3D 테이블·치수선을 다시 짓는다.
 function wireTableSettings() {
-  const inputs = [...document.querySelectorAll('.tbl-input')];
+  const inputs = [...document.querySelectorAll('.tbl-input[data-table]')];
   const sync = () => inputs.forEach((input) => { input.value = tableSettings[input.dataset.table]; });
   inputs.forEach((input) => {
     const [min, max] = TABLE_LIMITS[input.dataset.table];
@@ -232,6 +233,26 @@ function wireTableSettings() {
   sync();
 }
 
+// WALL SIZE의 높이 입력 — 값이 바뀌면 LAYOUT/3D의 벽과 치수선을 다시 짓는다.
+function wireWallHeights() {
+  const inputs = [...document.querySelectorAll('[data-wall-height]')];
+  const sync = () => inputs.forEach((input) => { input.value = WALLS.find((w) => w.id === input.dataset.wallHeight).heightMM; });
+  const apply = () => { recompute(); if (three) three.rebuildDimensions(); };
+  inputs.forEach((input) => {
+    [input.min, input.max] = WALL_HEIGHT_LIMITS;
+    input.addEventListener('change', () => {
+      input.value = setWallHeight(input.dataset.wallHeight, input.value);
+      apply();
+    });
+  });
+  document.getElementById('btn-wall-reset').addEventListener('click', () => {
+    resetWallHeights();
+    sync();
+    apply();
+  });
+  sync();
+}
+
 async function main() {
   // 모든 벽이 시안 이미지로 고정돼 있으면 자동 배치용 컨트롤(수량·간격·랜덤)은 숨긴다.
   if (WALLS.every((w) => w.image)) {
@@ -244,6 +265,7 @@ async function main() {
   wireCameraButtons();
   wireSceneToggles();
   wireTableSettings();
+  wireWallHeights();
   await loadPool();
 
   // 기본값: 3벽 모두 "꽉 채우기" 결과로 시작 (레퍼런스처럼 A0/A1/A2가 고르게 섞여 촘촘하게 채워짐)

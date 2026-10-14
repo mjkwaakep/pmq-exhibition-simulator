@@ -212,6 +212,8 @@ export class PosterWall3D {
     };
     const tablesVisible = this.tablesGroup.visible, dimsVisible = this.dimsGroup.visible;
     dispose(this.tablesGroup);
+    this.introGroup.traverse((o) => { if (o.material && o.material.map) o.material.map.dispose(); });
+    dispose(this.introGroup);
     dispose(this.dimsGroup);
     this._buildProps();
     this.tablesGroup.visible = tablesVisible;
@@ -515,10 +517,10 @@ export class PosterWall3D {
     // 보조 테이블 뒤(하단 외벽 쪽)에 전시 소개 벽을 세우고, 테이블은 그 벽 앞(Wall01 쪽)으로 당겨 놓는다.
     // 소개 벽: 8,300 × 2,500 × 100mm, 입구 쪽 면이 하단 외벽(출입구 커튼벽)에서 2,750mm. 테이블 뒷변 ↔ 벽 150mm.
     const sideLen = ts.sideLen * MM2M, sideCount = 4, sideGap = ts.sideGap * MM2M, sideDepth = ts.sideDep * MM2M; // 보조(아이맥) 테이블 기본 1,000mm, 테이블 사이 900mm
-    const introH = 2.5, introT = 0.1, introGap = 0.15;
+    const introH = ts.introH * MM2M, introT = 0.1, introGap = 0.15;
     const introFaceZ = ROOM_DEPTH_MM / 1000 - 2.75;
     const sideZ = introFaceZ - introT - introGap - sideDepth / 2;
-    if (!this.introGroup) this._buildIntroWall(tableCx, introFaceZ - introT / 2, 8.3, introH, introT); // 소개 벽은 테이블 설정과 무관하게 8,300 고정
+    this._buildIntroWall(tableCx, introFaceZ - introT / 2, ts.introLen * MM2M, introH, introT);
     const sideStep = sideLen + sideGap;
     const sideX0 = tableCx - (sideCount * sideLen + (sideCount - 1) * sideGap) / 2; // 도록 테이블 중심에 맞춰 가운데 정렬
     const sideRuns = Array.from({ length: sideCount }, (_, i) => {

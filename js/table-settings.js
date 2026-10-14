@@ -1,5 +1,5 @@
 // ============================================================================
-// 테이블 치수 설정(mm) — 사이드바 "TABLE SIZE"에서 바꾸는 값.
+// 테이블·전시 소개 벽 치수 설정(mm) — 사이드바 "TABLE SIZE"에서 바꾸는 값.
 // view-3d.js(_buildProps)와 site-extras.js(buildDimensions)가 같은 객체를 읽는다.
 // ============================================================================
 
@@ -9,6 +9,7 @@ export const TABLE_DEFAULTS = {
   sideGap: 900,                  // 보조 테이블 사이 간격
   leafLen: 6000, leafWid: 900,   // 리플렛 테이블(창 쪽 1개)
   topH: 900,                     // 상판 높이(모든 테이블 공통)
+  introLen: 8300, introH: 2500,  // 전시 소개 벽(보조 테이블 뒤) — 낮추면 파티션이 된다
 };
 
 // 입력 범위 — 방(31 × 20m) 안에 들어가고 다리·상판이 뒤집히지 않는 선.
@@ -18,6 +19,7 @@ export const TABLE_LIMITS = {
   sideGap: [0, 3000],
   leafLen: [1000, 16000], leafWid: [300, 2500],
   topH: [400, 1500],
+  introLen: [1000, 16000], introH: [300, 5000],
 };
 
 const STORAGE_KEY = 'pmq-table-settings';

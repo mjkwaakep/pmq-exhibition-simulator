@@ -80,8 +80,8 @@ export function buildDimensions() {
   dim([tx1, 0.03, cz], [tx1, 0.03, tz(0) - tDep / 2], [-0.6, 0, 0]);                    // Wall 01 ↔ 테이블
 
   // 보조 테이블
-  const sLen = ts.sideLen / 1000, sGap = ts.sideGap / 1000, sDep = ts.sideDep / 1000, introFaceZ = D - 2.75, introT = 0.1, introH = 2.5;
-  const ix1 = tCx - 4.15, ix2 = tCx + 4.15; // 소개 벽(8,300 고정)
+  const sLen = ts.sideLen / 1000, sGap = ts.sideGap / 1000, sDep = ts.sideDep / 1000, introFaceZ = D - 2.75, introT = 0.1, introH = ts.introH / 1000;
+  const ix1 = tCx - ts.introLen / 2000, ix2 = tCx + ts.introLen / 2000; // 소개 벽
   const sZ = introFaceZ - introT - 0.15 - sDep / 2; // view-3d.js _buildProps 와 같은 값
   const sX0 = tCx - (4 * sLen + 3 * sGap) / 2;
   dim([sX0, tH, sZ - sDep / 2], [sX0 + sLen, tH, sZ - sDep / 2], [0, 0, -0.35]);        // 길이

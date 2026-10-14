@@ -70,7 +70,7 @@ export function buildDimensions() {
 
   // 도록 테이블 (view-3d.js _buildProps 와 같은 값)
   const ts = tableSettings; // 사이드바 TABLE SIZE 설정(mm)
-  const tLen = ts.bookLen / 1000, tDep = ts.bookDep / 1000, tGap = 1.85, tCx = 20.0, tZ0 = 4.75 + tDep / 2, tH = ts.topH / 1000;
+  const tLen = ts.bookLen / 1000, tDep = ts.bookDep / 1000, tGap = 1.85, tCx = 20.0, tZ0 = 5.35 + tDep / 2, tH = ts.topH / 1000;
   const tx1 = tCx - tLen / 2, tx2 = tCx + tLen / 2;
   const tz = (i) => tZ0 + i * (tDep + tGap);
   dim([tx1, tH, tz(0) - tDep / 2], [tx2, tH, tz(0) - tDep / 2], [0, 0, -0.4]);          // 길이
@@ -157,15 +157,15 @@ export function buildFlow() {
   // 도면 기준: 입구(하단 외벽 오른쪽) → 디지털 존 앞 → Wall 03·02를 따라 위로 → Wall 01을 따라
   // 오른쪽으로 → 테이블 사이를 지그재그 → 다시 입구로(출구 = 입구).
   const tx1 = 15.85, tx2 = 24.15;
-  const aisle = [3.375, 6.175, 8.525, 10.875, 13.55]; // Wall01~테이블1, 테이블 사이 3곳, 테이블4 아래
+  const aisle = [3.975, 6.775, 9.125, 11.475, 14.15]; // Wall01~테이블1, 테이블 사이 3곳, 테이블4 아래
   arrow([[25.5, D - 0.6], [25.5, 15.4]]);                         // 입구 ↑
   arrow([[25.5, aisle[4]], [21.1, aisle[4]]]);                    // 테이블4 아래 ←
   arrow([[tx1 + 0.1, aisle[4]], [18.7, aisle[4]], [18.7, 14.95]]); // 디지털 존으로 ↓
-  arrow([[13.7, 18.6], [13.7, 11.0]]);                            // Wall 03 앞 ↑
-  arrow([[13.7, 9.6], [13.7, 4.4]]);                              // Wall 02 앞 ↑
+  arrow([[13.7, 18.6], [13.7, 11.4]]);                            // Wall 03 앞 ↑
+  arrow([[13.7, 9.4], [13.7, 5.0]]);                              // Wall 02 앞 ↑
   arrow([[tx1 + 0.1, aisle[0]], [18.7, aisle[0]]]);               // Wall 01 앞 →
   arrow([[20.3, aisle[0]], [26.8, aisle[0]]]);                    // Wall 01 앞 →
-  arrow([[26.8, 4.4], [26.8, 8.2]]);                              // 테이블 오른쪽 ↓
+  arrow([[26.8, 5.0], [26.8, 8.8]]);                              // 테이블 오른쪽 ↓
   arrow([[tx1 + 0.1, aisle[1]], [18.7, aisle[1]]]);               // 테이블 1·2 사이 →
   arrow([[tx2 - 0.1, aisle[2]], [21.1, aisle[2]]]);               // 테이블 2·3 사이 ←
   arrow([[tx1 + 0.1, aisle[3]], [18.7, aisle[3]]]);               // 테이블 3·4 사이 →

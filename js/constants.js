@@ -26,16 +26,17 @@ export const ROOM_DEPTH_MM = 20000;  // 깊이(Z) — 원본 도면의 C–D 기
 // 각 벽의 image는 인디자인 포스터 월 시안을 그대로 내보낸 입면 이미지(벽 안쪽에서
 // 정면으로 바라본 모습). image가 있으면 자동 패킹 대신 이 이미지를 벽에 그대로 붙인다.
 // posterCount는 그 시안에 들어간 포스터 수(표시용).
-export const GAP_BETWEEN_TRANSLUCENT_MM = 2000;
+export const GAP_BETWEEN_TRANSLUCENT_MM = 1400;
 
 // 좌표계: X-Z 바닥 평면(mm), Y 위. 왼쪽 외벽 = x:0, 상단 외벽 = z:0,
 // 하단 외벽 = z:ROOM_DEPTH_MM, 전면 창 = x:ROOM_WIDTH_MM.
-// 코너(Wall01↔Wall02)는 왼쪽 외벽에서 11.5m, 상단 외벽에서 2m 떨어진 지점 = (11500, 2000).
+// 코너(Wall01↔Wall02)는 왼쪽 외벽에서 11.5m, 상단 외벽에서 2.6m 떨어진 지점 = (11500, 2600).
 // (컨트롤 부스가 왼쪽 커튼에서 약 11.3m까지 튀어나와 있어 전시 전체를 창 쪽으로 1.5m 옮김)
 //   Wall01: 코너에서 +X로 17m(→ 오른쪽 전면 창까지 4m 남음), 법선 = world +X... 아니 +Z(안쪽)
 //   Wall02: 코너에서 +Z로 7m,                                법선 = world +X(안쪽)
-//   Wall03: 통로(2m) 건너 Wall02와 같은 직선으로 8m 이어짐(→ 하단 외벽까지 1m 남음)
-const CORNER = { x: 11500, z: 2000 };
+//   Wall03: 통로(1.4m) 건너 Wall02와 같은 직선으로 8m 이어짐(→ 하단 외벽까지 1m 남음)
+// 상단 벽 쪽 기둥(벽에서 약 1.26~2.45m)을 피하려고 Wall01을 상단 외벽에서 2.6m로 당겼다. Wall03은 그대로 두고 통로를 2m → 1.4m로 줄임.
+const CORNER = { x: 11500, z: 2600 };
 export const WALLS = [
   {
     id: 'wall01',
@@ -70,7 +71,7 @@ export const WALLS = [
     lengthMM: 8000,
     heightMM: TRANSLUCENT_WALL_HEIGHT_MM,
     material: 'translucent',
-    // Wall02 끝(코너에서 7000mm)에서 통로 2000mm를 건너 이어짐
+    // Wall02 끝(코너에서 7000mm)에서 통로 1400mm를 건너 이어짐
     origin: { x: CORNER.x, z: CORNER.z + 7000 + GAP_BETWEEN_TRANSLUCENT_MM },
     rotationY: -Math.PI / 2,
     flip: true,
@@ -80,9 +81,9 @@ export const WALLS = [
 ];
 
 // 통로를 포함한 포스터 월 전체 구간 길이. 실제 벽 재료 길이는 이보다
-// GAP_BETWEEN_TRANSLUCENT_MM(2m)만큼 짧다.
+// GAP_BETWEEN_TRANSLUCENT_MM(1.4m)만큼 짧다.
 export const TOTAL_WALL_MATERIAL_MM = WALLS.reduce((s, w) => s + w.lengthMM, 0); // 34000
-export const TOTAL_SPAN_MM = TOTAL_WALL_MATERIAL_MM + GAP_BETWEEN_TRANSLUCENT_MM; // 32000
+export const TOTAL_SPAN_MM = TOTAL_WALL_MATERIAL_MM + GAP_BETWEEN_TRANSLUCENT_MM; // 33400
 
 // A0/A1/A2 실제 규격 (mm, 세로형 포스터 기준 width × height)
 export const POSTER_SIZES = {

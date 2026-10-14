@@ -484,7 +484,7 @@ export class PosterWall3D {
     // 테이블 사이(가장자리 기준) 간격은 1,850mm.
     const tableTopH = ts.topH * MM2M, tableThick = 0.04, tableDepth = ts.bookDep * MM2M;
     const tableLen = ts.bookLen * MM2M, tableGap = 1.85, tableCount = 4;
-    const tableCx = 20.0, tableZ0 = 4.75 + tableDepth / 2; // Wall01(z=2) ↔ 첫 테이블 가장자리 2,750mm
+    const tableCx = 20.0, tableZ0 = 5.35 + tableDepth / 2; // Wall01(z=2.6) ↔ 첫 테이블 가장자리 2,750mm
     const tableRuns = Array.from({ length: tableCount }, (_, i) => ({
       x1: tableCx - tableLen / 2,
       x2: tableCx + tableLen / 2,

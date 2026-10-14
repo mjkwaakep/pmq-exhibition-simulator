@@ -142,29 +142,69 @@ export class PosterWall3D {
     body.castShadow = true; body.receiveShadow = true;
     g.add(body);
 
-    const PX = 400; // 1m당 픽셀
+    this.scene.add(g);
+    this.introGroup = g;
+  }
+
+  // 서문 벽 그래픽(더미). 일반적인 전시 서문 구성 — 위에서부터 장소·기간, 타이틀, 국문/영문 개요 2단,
+  // 맨 아래 크레딧. 글자 크기와 위치는 벽 크기와 무관하게 실제 치수(mm)로 잡는다: 본문 중심이 눈높이(약 1.45m).
+  _makeForewordTexture(len, h) {
+    const PX = 800; // 1m당 픽셀
     const c = document.createElement('canvas');
     c.width = Math.round(len * PX); c.height = Math.round(h * PX);
     const ctx = c.getContext('2d');
+    const mm = (v) => v * PX / 1000;
+    const yAt = (fromFloorMM) => c.height - mm(fromFloorMM); // 바닥에서 잰 높이 → 캔버스 y
+    const latin = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+    const hangul = '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif';
+    ctx.fillStyle = '#f4f3ef'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.fillStyle = '#111'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    const margin = mm(180), innerW = c.width - margin * 2;
+    // 낱말 단위로 줄바꿈하며 문단을 쓰고, 마지막 줄 아래 y를 돌려준다.
+    const paragraph = (str, x, y, width, lineH) => {
+      let line = '';
+      str.split(' ').forEach((word) => {
+        const next = line ? `${line} ${word}` : word;
+        if (line && ctx.measureText(next).width > width) { ctx.fillText(line, x, y); y += lineH; line = word; }
+        else line = next;
+      });
+      if (line) { ctx.fillText(line, x, y); y += lineH; }
+      return y;
+    };
+
+    ctx.font = `500 ${mm(26)}px ${latin}`;
+    ctx.fillText('PMQ · Qube 2/F, Hong Kong      0000. 00. 00 — 00. 00', margin, yAt(2130));
+    ctx.font = `700 ${mm(150)}px ${latin}`;
+    ctx.fillText('EVERYDAY', margin, yAt(1930));
+    ctx.fillText('PRACTICE', margin, yAt(1770));
+    ctx.font = `700 ${mm(92)}px ${hangul}`;
+    ctx.fillText('일상의실천', margin, yAt(1630));
+    ctx.fillRect(margin, yAt(1560), innerW, Math.max(1, mm(3))); // 타이틀과 본문을 가르는 선
+
+    const gutter = mm(90), colW = (innerW - gutter) / 2, top = yAt(1470), lineH = mm(42);
+    const en = [
+      'Everyday Practice is a graphic design studio based in Seoul. This exhibition brings together posters, books and digital works from the studio, and looks at how design meets the conditions of everyday life.',
+      'This is placeholder copy for the exhibition overview. It marks the position, length and size of the wall text and will be replaced with the final foreword.',
+    ];
+    const ko = [
+      '일상의실천은 서울을 기반으로 활동하는 그래픽 디자인 스튜디오입니다. 이 전시는 스튜디오가 만들어 온 포스터와 책, 디지털 작업을 한자리에 모아 디자인이 일상의 조건과 만나는 방식을 살펴봅니다.',
+      '이 글은 전시 개요가 들어갈 자리와 분량, 글자 크기를 보여 주기 위한 더미 텍스트이며 최종 서문으로 교체됩니다.',
+    ];
+    ctx.font = `400 ${mm(27)}px ${latin}`;
+    let y = top;
+    en.forEach((p) => { y = paragraph(p, margin, y, colW, lineH) + lineH * 0.6; });
+    ctx.font = `400 ${mm(26)}px ${hangul}`;
+    y = top;
+    ko.forEach((p) => { y = paragraph(p, margin + colW + gutter, y, colW, lineH) + lineH * 0.6; });
+
+    ctx.font = `400 ${mm(18)}px ${latin}`;
+    ctx.fillStyle = 'rgba(17,17,17,0.7)';
+    ctx.fillText('Organised by 0000      Supported by 0000      Design: Everyday Practice', margin, yAt(420));
+
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    const draw = () => {
-      const W = c.width, H = c.height;
-      ctx.clearRect(0, 0, W, H); // 바탕은 투명 — 반투명 패널 위에 글자만 얹는다
-      ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      const sans = '-apple-system, "Apple SD Gothic Neo", "Helvetica Neue", Arial, sans-serif';
-      ctx.font = `700 ${H * 0.115}px ${sans}`; ctx.fillText('일상의 실천', W * 0.5, H * 0.2);
-      ctx.font = `700 ${H * 0.115}px ${sans}`; ctx.fillText('EVERYDAY PRACTICE', W * 0.5, H * 0.33);
-      ctx.font = `700 ${H * 0.062}px ${sans}`; ctx.fillText('PMQ   HONG KONG', W * 0.5, H * 0.9);
-      tex.needsUpdate = true;
-    };
-    draw();
-    const face = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9, transparent: true, alphaTest: 0.3 }));
-    face.position.set(cx, h / 2, cz + t / 2 + 0.002); // +Z 면(하단 외벽·입구 쪽)
-    g.add(face);
-    this.scene.add(g);
-    this.introGroup = g;
+    return tex;
   }
 
   setTablesVisible(v) { if (this.tablesGroup) this.tablesGroup.visible = v; }
@@ -514,6 +554,15 @@ export class PosterWall3D {
       preface.position.set(tableCx + ts.introLen * MM2M / 2 - introT / 2, pH / 2, introFaceZ - introT - (pLen - introT) / 2);
       preface.castShadow = true; preface.receiveShadow = true;
       this.introGroup.add(preface);
+      // 입구 쪽 면(+X)에 타이틀과 전시 개요를 올린다. 평면을 +90도 돌리면 왼쪽 끝이 모서리(+Z) 쪽이 된다.
+      const faceLen = pLen - introT;
+      const text = new THREE.Mesh(
+        new THREE.PlaneGeometry(faceLen, pH),
+        new THREE.MeshStandardMaterial({ map: this._makeForewordTexture(faceLen, pH), roughness: 0.9 })
+      );
+      text.rotation.y = Math.PI / 2;
+      text.position.set(preface.position.x + introT / 2 + 0.002, pH / 2, preface.position.z);
+      this.introGroup.add(text);
     }
     const sideStep = sideLen + sideGap;
     const sideX0 = tableCx - (sideCount * sideLen + (sideCount - 1) * sideGap) / 2; // 도록 테이블 중심에 맞춰 가운데 정렬

@@ -34,8 +34,8 @@
     <section class="ctrl-group">
       <div class="ctrl-label">VIEW</div>
       <div class="view-tabs">
-        <button class="view-tab active" data-view="layout">LAYOUT</button>
-        <button class="view-tab" data-view="three">3D PERSPECTIVE</button>
+        <button class="view-tab" data-view="layout">LAYOUT</button>
+        <button class="view-tab active" data-view="three">3D PERSPECTIVE</button>
       </div>
     </section>
 
@@ -52,7 +52,7 @@
       <button class="action-btn" id="btn-reset">초기화</button>
     </section>
 
-    <section class="ctrl-group" id="camera-group" hidden>
+    <section class="ctrl-group" id="camera-group">
       <div class="ctrl-label">3D CAMERA</div>
       <div class="cam-btns">
         <button class="cam-btn cam-wide" data-cam="top">탑뷰</button>
@@ -133,8 +133,8 @@
   </aside>
 
   <main class="stage">
-    <div id="view-layout" class="view-pane active"></div>
-    <div id="view-three" class="view-pane"><div id="three-canvas"></div></div>
+    <div id="view-layout" class="view-pane"></div>
+    <div id="view-three" class="view-pane active"><div id="three-canvas"></div></div>
     <div id="loading" class="loading">포스터 데이터를 불러오는 중…</div>
   </main>
 

@@ -10,7 +10,7 @@ const state = {
   perWallCounts: {}, // { wall01: {A0,A1,A2}, ... }
   seed: 1,
   layout: null,
-  view: 'layout',
+  view: 'three', // 처음 열면 3D PERSPECTIVE부터 보여 준다(index.html의 탭·패널 기본값과 맞춤)
 };
 
 let three = null;

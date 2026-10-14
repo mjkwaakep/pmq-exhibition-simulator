@@ -7,6 +7,7 @@
 // ============================================================================
 import * as THREE from 'three';
 import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS, GAP_BETWEEN_TRANSLUCENT_MM } from './constants.js';
+import { tableSettings } from './table-settings.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
 const fmt = (m) => Math.round(m * 1000).toLocaleString('en-US');
@@ -66,7 +67,8 @@ export function buildDimensions() {
   dim([cx, 0, z3e], [cx, h2, z3e], [0, 0, 0.3]);                 // Wall 02·03 높이
 
   // 도록 테이블 (view-3d.js _buildProps 와 같은 값)
-  const tLen = 8.3, tDep = 0.5, tGap = 1.85, tCx = 20.0, tZ0 = 5.0, tH = 0.9;
+  const ts = tableSettings; // 사이드바 TABLE SIZE 설정(mm)
+  const tLen = ts.bookLen / 1000, tDep = ts.bookDep / 1000, tGap = 1.85, tCx = 20.0, tZ0 = 4.75 + tDep / 2, tH = ts.topH / 1000;
   const tx1 = tCx - tLen / 2, tx2 = tCx + tLen / 2;
   const tz = (i) => tZ0 + i * (tDep + tGap);
   dim([tx1, tH, tz(0) - tDep / 2], [tx2, tH, tz(0) - tDep / 2], [0, 0, -0.4]);          // 길이
@@ -77,21 +79,23 @@ export function buildDimensions() {
   dim([tx1, 0.03, cz], [tx1, 0.03, tz(0) - tDep / 2], [-0.6, 0, 0]);                    // Wall 01 ↔ 테이블
 
   // 보조 테이블
-  const sLen = 1.0, sGap = 0.9, introFaceZ = D - 2.75, introT = 0.1, introH = 2.5;
-  const sZ = introFaceZ - introT - 0.15 - tDep / 2; // view-3d.js _buildProps 와 같은 값
+  const sLen = ts.sideLen / 1000, sGap = ts.sideGap / 1000, sDep = ts.sideDep / 1000, introFaceZ = D - 2.75, introT = 0.1, introH = 2.5;
+  const ix1 = tCx - 4.15, ix2 = tCx + 4.15; // 소개 벽(8,300 고정)
+  const sZ = introFaceZ - introT - 0.15 - sDep / 2; // view-3d.js _buildProps 와 같은 값
   const sX0 = tCx - (4 * sLen + 3 * sGap) / 2;
-  dim([sX0, tH, sZ - tDep / 2], [sX0 + sLen, tH, sZ - tDep / 2], [0, 0, -0.35]);        // 길이
-  dim([sX0 + sLen, tH, sZ - tDep / 2], [sX0 + sLen + sGap, tH, sZ - tDep / 2], [0, 0, -0.35]); // 보조 테이블 간격
-  dim([sX0 + 4 * sLen + 3 * sGap, tH, sZ - tDep / 2], [sX0 + 4 * sLen + 3 * sGap, tH, sZ + tDep / 2], [0.45, 0, 0]);                // 폭
-  dim([tx2, 0.03, introFaceZ], [tx2, 0.03, D], [1.1, 0, 0]);                            // 소개 벽 ↔ 하단 외벽
-  dim([tx1, introH, introFaceZ], [tx2, introH, introFaceZ], [0, 0.3, 0]);               // 소개 벽 길이
-  dim([tx2, 0, introFaceZ], [tx2, introH, introFaceZ], [0.35, 0, 0]);                   // 소개 벽 높이
-  dim([tx2, 0.03, tz(3) + tDep / 2], [tx2, 0.03, sZ - tDep / 2], [1.1, 0, 0]);          // 도록 ↔ 보조 테이블
+  dim([sX0, tH, sZ - sDep / 2], [sX0 + sLen, tH, sZ - sDep / 2], [0, 0, -0.35]);        // 길이
+  if (sGap > 0) dim([sX0 + sLen, tH, sZ - sDep / 2], [sX0 + sLen + sGap, tH, sZ - sDep / 2], [0, 0, -0.35]); // 보조 테이블 간격
+  dim([sX0 + 4 * sLen + 3 * sGap, tH, sZ - sDep / 2], [sX0 + 4 * sLen + 3 * sGap, tH, sZ + sDep / 2], [0.45, 0, 0]);                // 폭
+  dim([ix2, 0.03, introFaceZ], [ix2, 0.03, D], [1.1, 0, 0]);                            // 소개 벽 ↔ 하단 외벽
+  dim([ix1, introH, introFaceZ], [ix2, introH, introFaceZ], [0, 0.3, 0]);               // 소개 벽 길이
+  dim([ix2, 0, introFaceZ], [ix2, introH, introFaceZ], [0.35, 0, 0]);                   // 소개 벽 높이
+  dim([tx2, 0.03, tz(3) + tDep / 2], [tx2, 0.03, sZ - sDep / 2], [1.1, 0, 0]);          // 도록 ↔ 보조 테이블
 
   // 리플렛 테이블(전면 창 쪽, 모서리 굴린 직사각형) — view-3d.js _buildProps 와 같은 값
-  dim([W - 1.95 - 0.45, tH, D / 2 - 1.5], [W - 1.95 - 0.45, tH, D / 2 + 1.5], [-0.4, 0, 0]);     // 길이 3,000
-  dim([W - 1.95 - 0.45, tH, D / 2 - 1.5], [W - 1.95 + 0.45, tH, D / 2 - 1.5], [0, 0, -0.4]);     // 폭 900
-  dim([W - 1.95 + 0.45, 0.03, D / 2 + 1.5], [W, 0.03, D / 2 + 1.5], [0, 0, 0.5]);               // 테이블 ↔ 전면 창
+  const rX = W - 1.95, rHl = ts.leafLen / 2000, rHw = ts.leafWid / 2000;
+  dim([rX - rHw, tH, D / 2 - rHl], [rX - rHw, tH, D / 2 + rHl], [-0.4, 0, 0]);          // 길이
+  dim([rX - rHw, tH, D / 2 - rHl], [rX + rHw, tH, D / 2 - rHl], [0, 0, -0.4]);          // 폭
+  dim([rX + rHw, 0.03, D / 2 + rHl], [W, 0.03, D / 2 + rHl], [0, 0, 0.5]);              // 테이블 ↔ 전면 창
 
   // 공간
   dim([0, 0.03, 0], [W, 0.03, 0], [0, 0, 0.9]);                                         // 가로

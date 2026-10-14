@@ -2,6 +2,7 @@ import { WALLS, POSTER_SIZES } from './constants.js';
 import { buildLayout, countsSummary, autoFillWallCounts } from './pack.js';
 import { renderLayoutView } from './view-layout.js';
 import { PosterWall3D } from './view-3d.js';
+import { tableSettings, TABLE_LIMITS, setTableValue, resetTableSettings } from './table-settings.js';
 
 const state = {
   pool: [],
@@ -211,6 +212,26 @@ function wireSceneToggles() {
   });
 }
 
+// TABLE SIZE 입력 — 값이 바뀌면 3D 테이블·치수선을 다시 짓는다.
+function wireTableSettings() {
+  const inputs = [...document.querySelectorAll('.tbl-input')];
+  const sync = () => inputs.forEach((input) => { input.value = tableSettings[input.dataset.table]; });
+  inputs.forEach((input) => {
+    const [min, max] = TABLE_LIMITS[input.dataset.table];
+    input.min = min; input.max = max;
+    input.addEventListener('change', () => {
+      input.value = setTableValue(input.dataset.table, input.value);
+      if (three) three.rebuildTables();
+    });
+  });
+  document.getElementById('btn-table-reset').addEventListener('click', () => {
+    resetTableSettings();
+    sync();
+    if (three) three.rebuildTables();
+  });
+  sync();
+}
+
 async function main() {
   // 모든 벽이 시안 이미지로 고정돼 있으면 자동 배치용 컨트롤(수량·간격·랜덤)은 숨긴다.
   if (WALLS.every((w) => w.image)) {
@@ -222,6 +243,7 @@ async function main() {
   wireActions();
   wireCameraButtons();
   wireSceneToggles();
+  wireTableSettings();
   await loadPool();
 
   // 기본값: 3벽 모두 "꽉 채우기" 결과로 시작 (레퍼런스처럼 A0/A1/A2가 고르게 섞여 촘촘하게 채워짐)

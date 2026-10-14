@@ -6,6 +6,7 @@ import { OrbitControls } from '../vendor/OrbitControls.js';
 import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM } from './constants.js';
 import { loadWallImage } from './wall-image.js';
 import { buildDimensions, buildFlow, buildSite } from './site-extras.js';
+import { tableSettings } from './table-settings.js';
 
 const MM2M = 0.001;
 const ROOM_H = ROOM_HEIGHT_MM * MM2M; // 5m 층고
@@ -177,6 +178,24 @@ export class PosterWall3D {
   }
 
   setTablesVisible(v) { if (this.tablesGroup) this.tablesGroup.visible = v; }
+
+  // TABLE SIZE 설정(table-settings.js)이 바뀌면 테이블·스툴·아이맥·도록과 치수선을 다시 짓는다.
+  rebuildTables() {
+    const dispose = (group) => {
+      this.scene.remove(group);
+      group.traverse((o) => {
+        if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } // 치수 라벨(스프라이트는 공용 geometry)
+        else if (o.geometry) o.geometry.dispose();
+      });
+    };
+    const tablesVisible = this.tablesGroup.visible, dimsVisible = this.dimsGroup.visible;
+    dispose(this.tablesGroup);
+    dispose(this.dimsGroup);
+    this._buildProps();
+    this.tablesGroup.visible = tablesVisible;
+    this.dimsGroup = buildDimensions(); this.scene.add(this.dimsGroup);
+    this.dimsGroup.visible = dimsVisible;
+  }
 
   // Wall01 입면 이미지를 현재 전시 버전에 맞게 바꿔 끼운다.
   _applyWall01Image() {
@@ -455,51 +474,55 @@ export class PosterWall3D {
     this.tablesGroup = new THREE.Group();
     const topMat = new THREE.MeshStandardMaterial({ color: 0xd8cdb8, roughness: 0.55, metalness: 0.05 });
     const legMat = new THREE.MeshStandardMaterial({ color: 0x8a8f94, roughness: 0.4, metalness: 0.6 });
-    // 도록 테이블: 8,300 × 500mm 4개. Wall01(x 11.5~28.5m)의 가운데(x=20m)에 맞춰 나란히 놓고
+    // 길이·폭·높이는 사이드바 TABLE SIZE 설정(table-settings.js, mm)을 따른다.
+    const ts = tableSettings;
+    // 도록 테이블: 기본 8,300 × 500mm 4개. Wall01(x 11.5~28.5m)의 가운데(x=20m)에 맞춰 나란히 놓고
     // 테이블 사이(가장자리 기준) 간격은 1,850mm.
-    const tableTopH = 0.9, tableThick = 0.04, tableDepth = 0.5;
-    const tableLen = 8.3, tableGap = 1.85, tableCount = 4;
-    const tableCx = 20.0, tableZ0 = 5.0; // Wall01(z=2) ↔ 첫 테이블 가장자리 2,750mm
+    const tableTopH = ts.topH * MM2M, tableThick = 0.04, tableDepth = ts.bookDep * MM2M;
+    const tableLen = ts.bookLen * MM2M, tableGap = 1.85, tableCount = 4;
+    const tableCx = 20.0, tableZ0 = 4.75 + tableDepth / 2; // Wall01(z=2) ↔ 첫 테이블 가장자리 2,750mm
     const tableRuns = Array.from({ length: tableCount }, (_, i) => ({
       x1: tableCx - tableLen / 2,
       x2: tableCx + tableLen / 2,
       z: tableZ0 + i * (tableDepth + tableGap),
+      depth: tableDepth,
     }));
     // 보조 테이블: 1,200 × 500mm 4개. Wall01 맞은편(하단 외벽) 쪽에 벽과 나란히 한 줄로 놓는다.
     // 벽에서 500mm 띄우고, 도록 테이블과 같은 폭(8.3m) 안에 고르게 나눈다.
     // 보조 테이블 뒤(하단 외벽 쪽)에 전시 소개 벽을 세우고, 테이블은 그 벽 앞(Wall01 쪽)으로 당겨 놓는다.
     // 소개 벽: 8,300 × 2,500 × 100mm, 입구 쪽 면이 하단 외벽(출입구 커튼벽)에서 2,750mm. 테이블 뒷변 ↔ 벽 150mm.
-    const sideLen = 1.0, sideCount = 4, sideGap = 0.9; // 보조(아이맥) 테이블 1,000mm, 테이블 사이 900mm
+    const sideLen = ts.sideLen * MM2M, sideCount = 4, sideGap = ts.sideGap * MM2M, sideDepth = ts.sideDep * MM2M; // 보조(아이맥) 테이블 기본 1,000mm, 테이블 사이 900mm
     const introH = 2.5, introT = 0.1, introGap = 0.15;
     const introFaceZ = ROOM_DEPTH_MM / 1000 - 2.75;
-    const sideZ = introFaceZ - introT - introGap - tableDepth / 2;
-    this._buildIntroWall(tableCx, introFaceZ - introT / 2, tableLen, introH, introT);
+    const sideZ = introFaceZ - introT - introGap - sideDepth / 2;
+    if (!this.introGroup) this._buildIntroWall(tableCx, introFaceZ - introT / 2, 8.3, introH, introT); // 소개 벽은 테이블 설정과 무관하게 8,300 고정
     const sideStep = sideLen + sideGap;
     const sideX0 = tableCx - (sideCount * sideLen + (sideCount - 1) * sideGap) / 2; // 도록 테이블 중심에 맞춰 가운데 정렬
     const sideRuns = Array.from({ length: sideCount }, (_, i) => {
       const x1 = sideX0 + i * sideStep;
-      return { x1, x2: x1 + sideLen, z: sideZ };
+      return { x1, x2: x1 + sideLen, z: sideZ, depth: sideDepth };
     });
-    [...tableRuns, ...sideRuns].forEach(({ x1, x2, z }) => {
+    [...tableRuns, ...sideRuns].forEach(({ x1, x2, z, depth }) => {
       const len = Math.abs(x2 - x1);
       const cx = (x1 + x2) / 2;
-      const top = new THREE.Mesh(new THREE.BoxGeometry(len, tableThick, tableDepth), topMat);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(len, tableThick, depth), topMat);
       top.position.set(cx, tableTopH - tableThick / 2, z);
       this.tablesGroup.add(top);
       const legR = 0.02;
       [x1 + 0.15, x2 - 0.15].forEach((lx) => {
-        [z - tableDepth / 2 + 0.08, z + tableDepth / 2 - 0.08].forEach((lz) => {
+        [z - depth / 2 + 0.08, z + depth / 2 - 0.08].forEach((lz) => {
           const leg = new THREE.Mesh(new THREE.CylinderGeometry(legR, legR, tableTopH - tableThick, 10), legMat);
           leg.position.set(lx, (tableTopH - tableThick) / 2, lz);
           this.tablesGroup.add(leg);
         });
       });
     });
-    // 리플렛 테이블: 모서리를 크게 굴린 직사각형 3,000 × 900mm(모서리 반경 350mm), 상판 높이는 도록 테이블과 같은 900mm.
+    // 리플렛 테이블: 모서리를 크게 굴린 직사각형 기본 6,000 × 900mm(모서리 반경 350mm), 상판 높이는 도록 테이블과 같다.
     // 전면 창 쪽(Wall01 끝과 창 사이) 가운데에 창과 나란히 둔다.
     {
       const rx = ROOM_WIDTH_MM / 1000 - 1.95, rz = ROOM_DEPTH_MM / 1000 / 2;
-      const rLen = 3.0, rWid = 0.9, rRad = 0.35; // 길이(Z 방향), 폭(X 방향), 모서리 반경
+      const rLen = ts.leafLen * MM2M, rWid = ts.leafWid * MM2M; // 길이(Z 방향), 폭(X 방향)
+      const rRad = Math.min(0.35, rWid / 2 - 0.001, rLen / 2 - 0.001); // 모서리 반경
       const hw = rWid / 2, hl = rLen / 2;
       const sh = new THREE.Shape();
       sh.moveTo(-hw + rRad, -hl);
@@ -513,16 +536,16 @@ export class PosterWall3D {
       rTop.position.set(rx, tableTopH, rz);
       rTop.castShadow = true; rTop.receiveShadow = true;
       this.tablesGroup.add(rTop);
-      [-1, 1].forEach((sx) => { [-1, 1].forEach((sz) => {
+      [-1, 1].forEach((sx) => { [-1, 0, 1].forEach((sz) => {
         const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, tableTopH - tableThick, 10), legMat);
-        leg.position.set(rx + sx * (hw - 0.2), (tableTopH - tableThick) / 2, rz + sz * (hl - 0.35));
+        leg.position.set(rx + sx * Math.max(hw - 0.2, hw / 2), (tableTopH - tableThick) / 2, rz + sz * (hl - 0.35));
         this.tablesGroup.add(leg);
       }); });
       // 리플렛 더미(A4)
       const colors = [0xff40b2, 0x3d75ff, 0xf7f729, 0x73e312, 0xff3d17, 0x7d3d99];
       colors.forEach((color, i) => {
         const stack = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.03, 0.297), new THREE.MeshStandardMaterial({ color, roughness: 0.8 }));
-        stack.position.set(rx + (i % 2 ? 0.14 : -0.14), tableTopH + 0.015, rz - 1.0 + i * 0.4);
+        stack.position.set(rx + (i % 2 ? 0.14 : -0.14), tableTopH + 0.015, rz + (i - 2.5) * rLen * 2 / 15);
         stack.rotation.y = Math.PI / 2 + (i % 2 ? 0.08 : -0.06);
         this.tablesGroup.add(stack);
       });
@@ -547,7 +570,7 @@ export class PosterWall3D {
       g.add(ring);
       return g;
     };
-    const zFar = sideZ - tableDepth / 2 - 0.55;       // 보조 테이블 바로 앞
+    const zFar = sideZ - sideDepth / 2 - 0.55;       // 보조 테이블 바로 앞
     const stoolSpots = sideRuns.map((r) => [(r.x1 + r.x2) / 2, zFar]); // 보조 테이블 앞에만
     this.stoolsGroup = new THREE.Group();
     stoolSpots.forEach(([x, z]) => {
@@ -585,12 +608,13 @@ export class PosterWall3D {
     this.booksGroup = new THREE.Group();
     this.tablesGroup.add(this.booksGroup);
     this._tableGeom = { tableRuns, tableTopH, tableDepth };
-    this.setBookVersion('b');
+    this.setBookVersion(this._bookVersion || 'b');
 
 
     // 실제 사람 사진(반투명 실루엣 처리)을 카메라를 향하는 flat billboard로 세운다
     // — 건축 시각화에서 스케일감을 보여줄 때 흔히 쓰는 "cutout entourage" 방식.
     // 이미지 출처: skalgubbar.se (건축 시각화용 무료 컷아웃 인물, CC 라이선스).
+    if (this.peopleGroup) return; // 테이블만 다시 지을 때(rebuildTables) 사람은 그대로 둔다
     this.peopleGroup = new THREE.Group();
     this._billboards = [];
     const peoplePlacements = [

@@ -121,6 +121,18 @@ body {
 .wall-table .tag.translucent { background: rgba(111,168,220,.18); color: #8fc0ec; }
 .wall-table .total-row td { font-weight: 700; color: var(--text); border-bottom: none; padding-top: 8px; }
 .wall-table em { display: block; font-style: normal; color: #666a70; font-size: 9px; }
+.tbl-input {
+  width: 54px; padding: 3px 4px; text-align: right; font: inherit; font-variant-numeric: tabular-nums;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; color: var(--text);
+  -moz-appearance: textfield; appearance: textfield;
+}
+.tbl-input::-webkit-outer-spin-button, .tbl-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.tbl-input:focus { outline: none; border-color: var(--accent); }
+.tbl-reset {
+  margin-top: 8px; width: 100%; padding: 6px 8px; cursor: pointer; font-size: 11.5px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text-dim);
+}
+.tbl-reset:hover { border-color: #4a4e55; color: var(--text); }
 .wall-shape-note { margin-top: 8px; font-size: 10px; color: var(--text-dim); line-height: 1.5; }
 
 /* ---------- per-wall poster count blocks ---------- */

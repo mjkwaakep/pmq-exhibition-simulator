@@ -10,6 +10,7 @@ export const TABLE_DEFAULTS = {
   leafLen: 6000, leafWid: 900,   // 리플렛 테이블(창 쪽 1개)
   topH: 900,                     // 상판 높이(모든 테이블 공통)
   introLen: 8300, introH: 2500,  // 전시 소개 벽(보조 테이블 뒤) — 낮추면 파티션이 된다
+  prefaceLen: 2500, prefaceH: 2400, // 서문 벽 — 소개 벽의 입구 쪽 끝에서 직각으로 꺾여 전시장 안으로 들어온다
 };
 
 // 입력 범위 — 방(31 × 20m) 안에 들어가고 다리·상판이 뒤집히지 않는 선.
@@ -20,6 +21,7 @@ export const TABLE_LIMITS = {
   leafLen: [1000, 16000], leafWid: [300, 2500],
   topH: [400, 1500],
   introLen: [1000, 16000], introH: [300, 5000],
+  prefaceLen: [500, 6000], prefaceH: [300, 5000],
 };
 
 const STORAGE_KEY = 'pmq-table-settings';

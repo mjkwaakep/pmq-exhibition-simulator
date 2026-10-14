@@ -81,7 +81,7 @@ export function buildDimensions() {
   dim([tx1, 0.03, cz], [tx1, 0.03, tz(0) - tDep / 2], [-0.6, 0, 0]);                    // Wall 01 ↔ 테이블
 
   // 보조 테이블
-  const sLen = ts.sideLen / 1000, sGap = ts.sideGap / 1000, sDep = ts.sideDep / 1000, introFaceZ = D - 2.75, introT = 0.1, introH = ts.introH / 1000;
+  const sLen = ts.sideLen / 1000, sGap = ts.sideGap / 1000, sDep = ts.sideDep / 1000, introFaceZ = D - 1.31, introT = 0.1, introH = ts.introH / 1000;
   const ix1 = tCx - ts.introLen / 2000, ix2 = tCx + ts.introLen / 2000; // 소개 벽
   const sZ = introFaceZ - introT - 0.15 - sDep / 2; // view-3d.js _buildProps 와 같은 값
   const sX0 = tCx - (4 * sLen + 3 * sGap) / 2;
@@ -90,7 +90,11 @@ export function buildDimensions() {
   dim([sX0 + 4 * sLen + 3 * sGap, tH, sZ - sDep / 2], [sX0 + 4 * sLen + 3 * sGap, tH, sZ + sDep / 2], [0.45, 0, 0]);                // 폭
   dim([ix2, 0.03, introFaceZ], [ix2, 0.03, D], [1.1, 0, 0]);                            // 소개 벽 ↔ 하단 외벽
   dim([ix1, introH, introFaceZ], [ix2, introH, introFaceZ], [0, 0.3, 0]);               // 소개 벽 길이
-  dim([ix2, 0, introFaceZ], [ix2, introH, introFaceZ], [0.35, 0, 0]);                   // 소개 벽 높이
+  dim([ix1, 0, introFaceZ], [ix1, introH, introFaceZ], [-0.35, 0, 0]);                  // 소개 벽 높이
+  // 서문 벽(소개 벽 입구 쪽 끝에서 직각)
+  const pLen = ts.prefaceLen / 1000, pH = ts.prefaceH / 1000, pX = ix2 + introT;
+  dim([pX, pH, introFaceZ - pLen], [pX, pH, introFaceZ], [0, 0.3, 0]);                  // 서문 벽 길이
+  dim([pX, 0, introFaceZ - pLen], [pX, pH, introFaceZ - pLen], [0, 0, -0.35]);          // 서문 벽 높이
   dim([tx2, 0.03, tz(3) + tDep / 2], [tx2, 0.03, sZ - sDep / 2], [1.1, 0, 0]);          // 도록 ↔ 보조 테이블
 
   // 리플렛 테이블(전면 창 쪽, 모서리 굴린 직사각형) — view-3d.js _buildProps 와 같은 값
@@ -160,7 +164,7 @@ export function buildFlow() {
   const aisle = [3.975, 6.775, 9.125, 11.475, 14.15]; // Wall01~테이블1, 테이블 사이 3곳, 테이블4 아래
   arrow([[25.5, D - 0.6], [25.5, 15.4]]);                         // 입구 ↑
   arrow([[25.5, aisle[4]], [21.1, aisle[4]]]);                    // 테이블4 아래 ←
-  arrow([[tx1 + 0.1, aisle[4]], [18.7, aisle[4]], [18.7, 14.95]]); // 디지털 존으로 ↓
+  arrow([[tx1 + 0.1, aisle[4]], [18.7, aisle[4]], [18.7, 16.4]]); // 디지털 존으로 ↓
   arrow([[13.7, 18.6], [13.7, 11.4]]);                            // Wall 03 앞 ↑
   arrow([[13.7, 9.4], [13.7, 5.0]]);                              // Wall 02 앞 ↑
   arrow([[tx1 + 0.1, aisle[0]], [18.7, aisle[0]]]);               // Wall 01 앞 →

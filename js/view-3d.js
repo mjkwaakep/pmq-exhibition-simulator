@@ -492,9 +492,21 @@ export class PosterWall3D {
     // 소개 벽: 8,300 × 2,500 × 100mm, 입구 쪽 면이 하단 외벽(출입구 커튼벽)에서 2,750mm. 테이블 뒷변 ↔ 벽 150mm.
     const sideLen = ts.sideLen * MM2M, sideCount = 4, sideGap = ts.sideGap * MM2M, sideDepth = ts.sideDep * MM2M; // 보조(아이맥) 테이블 기본 1,000mm, 테이블 사이 900mm
     const introH = ts.introH * MM2M, introT = 0.1, introGap = 0.15;
-    const introFaceZ = ROOM_DEPTH_MM / 1000 - 2.75;
+    // 소개 벽의 뒷면(하단 외벽 쪽)을 하단 기둥이 끝나는 선(벽에서 1,310mm)에 맞춘다.
+    const introFaceZ = ROOM_DEPTH_MM / 1000 - 1.31;
     const sideZ = introFaceZ - introT - introGap - sideDepth / 2;
     this._buildIntroWall(tableCx, introFaceZ - introT / 2, ts.introLen * MM2M, introH, introT);
+    // 서문 벽: 소개 벽의 입구 쪽 끝(+X)에서 90도로 꺾여 전시장 안(-Z)으로 들어온다. 글은 입구 쪽 면(+X)에 올린다.
+    {
+      const pLen = ts.prefaceLen * MM2M, pH = ts.prefaceH * MM2M;
+      const preface = new THREE.Mesh(
+        new THREE.BoxGeometry(introT, pH, pLen),
+        new THREE.MeshStandardMaterial({ color: 0xf4f3ef, roughness: 0.9 })
+      );
+      preface.position.set(tableCx + ts.introLen * MM2M / 2 + introT / 2, pH / 2, introFaceZ - pLen / 2);
+      preface.castShadow = true; preface.receiveShadow = true;
+      this.introGroup.add(preface);
+    }
     const sideStep = sideLen + sideGap;
     const sideX0 = tableCx - (sideCount * sideLen + (sideCount - 1) * sideGap) / 2; // 도록 테이블 중심에 맞춰 가운데 정렬
     const sideRuns = Array.from({ length: sideCount }, (_, i) => {
@@ -802,7 +814,7 @@ export class PosterWall3D {
       front: { pos: [20, 2.1, 8], target: [20, 1.25, 2] },
       left:  { pos: [21, 2.1, 5.5], target: [11.5, 1.25, 5.5] },
       right: { pos: [21, 2.1, 15], target: [11.5, 1.25, 15] },
-      entrance: { pos: [26.3, 1.6, 19.6], target: [21, 1.3, 17.0] }, // 전시 입구에 서서 소개 벽을 바라본 시점
+      entrance: { pos: [26.3, 1.6, 19.6], target: [20, 1.3, 13.0] }, // 전시 입구에 서서 서문 벽과 전시장 안쪽을 바라본 시점
     };
     const p = presets[preset] || presets.full;
     this._tween = { from: this.camera.position.clone(), to: new THREE.Vector3(...p.pos), fromT: this.controls.target.clone(), toT: new THREE.Vector3(...p.target), t: 0 };

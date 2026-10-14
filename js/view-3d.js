@@ -143,8 +143,7 @@ export class PosterWall3D {
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    const posterBox = [[0.30, 0.42, 0.145, 0.27], [0.755, 0.42, 0.145, 0.27]]; // x, y, w, h (벽 대비 비율)
-    const draw = (imgs = []) => {
+    const draw = () => {
       const W = c.width, H = c.height;
       ctx.fillStyle = '#f4f3ef'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
@@ -163,23 +162,9 @@ export class PosterWall3D {
           y += H * 0.013;
         }
       });
-      posterBox.forEach(([x, y, w, hh], i) => {
-        const px = W * x, py = H * y, pw = W * w, ph = H * hh;
-        ctx.fillStyle = '#111'; ctx.fillRect(px - 6, py - 6, pw + 12, ph + 12);
-        if (imgs[i]) ctx.drawImage(imgs[i], px, py, pw, ph);
-        else { ctx.fillStyle = '#d9d6cf'; ctx.fillRect(px, py, pw, ph); }
-      });
       tex.needsUpdate = true;
     };
     draw();
-    // 액자 속 포스터는 포스터 목록 앞쪽 두 장을 자리 표시용으로 쓴다.
-    fetch('posters.json').then((r) => r.json()).then((list) => {
-      const files = list.filter((p) => p.file).slice(0, 2).map((p) => `posters/${p.file}`);
-      return Promise.all(files.map((f) => new Promise((res) => {
-        const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = f;
-      })));
-    }).then((imgs) => draw(imgs)).catch(() => {});
-
     const face = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
     face.position.set(cx, h / 2, cz + t / 2 + 0.002); // +Z 면(하단 외벽·입구 쪽)
     g.add(face);

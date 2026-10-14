@@ -9,6 +9,12 @@ import { buildDimensions, buildFlow, buildSite, buildColumns, buildExitZones } f
 import { tableSettings } from './table-settings.js';
 
 const MM2M = 0.001;
+// 벽 시안 이미지에서 실제 벽 크기에 해당하는 부분만 보이게 한다(setPosters가 crop을 계산해 둔다).
+function applyCrop(tex, mat) {
+  const { u, v, offsetU } = mat.userData.crop;
+  tex.repeat.set(u, v);
+  tex.offset.set(offsetU, 0);
+}
 const ROOM_H = ROOM_HEIGHT_MM * MM2M; // 5m 층고
 const ROOM_W = ROOM_WIDTH_MM * MM2M;  // 30m 가로(X) — 왼쪽 외벽(x=0) ~ 전면 창(x=ROOM_W)
 const ROOM_D = ROOM_DEPTH_MM * MM2M;  // 20m 깊이(Z) — 상단 외벽(z=0) ~ 하단 외벽(z=ROOM_D)
@@ -225,7 +231,7 @@ export class PosterWall3D {
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-      tex.repeat.set(1, f.faceMat.userData.cropV);
+      applyCrop(tex, f.faceMat);
       if (f.faceMat.map) f.faceMat.map.dispose();
       f.faceMat.map = tex;
       f.faceMat.visible = true;
@@ -760,10 +766,12 @@ export class PosterWall3D {
       if (wall.image) {
         // 이미지는 시안 기준 높이(imageHeightMM)대로 바닥에 맞춰 붙인다. 벽이 더 높으면 위가 비고,
         // 더 낮으면 이미지 윗부분을 잘라낸다(cropV = 보이는 비율) — 늘이거나 줄이지 않는다.
-        const Lm = wall.lengthMM * MM2M, imgH = (wall.imageHeightMM || wall.heightMM) * MM2M;
-        const Hm = Math.min(wall.heightMM * MM2M, imgH);
+        // 길이도 같다: 벽의 시작점(origin)에 맞춰 붙이고, 벽이 짧으면 끝 쪽을 잘라낸다(cropU).
+        const imgL = (wall.imageLengthMM || wall.lengthMM) * MM2M, imgH = (wall.imageHeightMM || wall.heightMM) * MM2M;
+        const Lm = Math.min(wall.lengthMM * MM2M, imgL), Hm = Math.min(wall.heightMM * MM2M, imgH);
         const faceMat = new THREE.MeshStandardMaterial({ roughness: 0.75, metalness: 0, alphaTest: 0.5, visible: false });
-        faceMat.userData.cropV = Hm / imgH;
+        // flip 벽은 평면을 180도 돌려 붙이므로 이미지의 오른쪽 끝이 벽의 시작점이다.
+        faceMat.userData.crop = { u: Lm / imgL, v: Hm / imgH, offsetU: wall.flip ? 1 - Lm / imgL : 0 };
         const face = new THREE.Mesh(new THREE.PlaneGeometry(Lm, Hm), faceMat);
         face.position.set(Lm / 2, Hm / 2, sign * 0.065);
         face.rotation.y = rotY;
@@ -778,7 +786,7 @@ export class PosterWall3D {
           const tex = new THREE.CanvasTexture(canvas);
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-          tex.repeat.set(1, faceMat.userData.cropV);
+          applyCrop(tex, faceMat);
           faceMat.map = tex;
           faceMat.visible = true;
           faceMat.needsUpdate = true;

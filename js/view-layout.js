@@ -54,10 +54,12 @@ export function renderLayoutView(container, layout) {
     // 시안 이미지가 있는 벽: 자동 배치 대신 입면 이미지를 벽 전체에 그대로 얹는다.
     if (wall.image) {
       // 이미지는 시안 기준 높이대로 바닥에 맞춘다 — 벽이 높으면 위가 비고, 낮으면 윗부분이 잘린다.
+      // 길이도 벽의 시작점에 맞춘다(flip 벽은 이미지 오른쪽 끝이 시작점).
       const imgPx = (wall.imageHeightMM || wall.heightMM) * scale;
+      const imgWPx = (wall.imageLengthMM || wall.lengthMM) * scale;
       const clipId = `wallclip-${wall.id}`;
       el('rect', { x: gx, y: gy, width: wPx, height: hPx }, el('clipPath', { id: clipId }, svg));
-      const img = el('image', { x: gx, y: gy + hPx - imgPx, width: wPx, height: imgPx, preserveAspectRatio: 'none', 'clip-path': `url(#${clipId})` }, svg);
+      const img = el('image', { x: wall.flip ? gx + wPx - imgWPx : gx, y: gy + hPx - imgPx, width: imgWPx, height: imgPx, preserveAspectRatio: 'none', 'clip-path': `url(#${clipId})` }, svg);
       loadWallImage(wall.image).then((canvas) => img.setAttribute('href', canvas.toDataURL('image/png')));
     }
 

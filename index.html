@@ -82,15 +82,15 @@
     <section class="ctrl-group">
       <div class="ctrl-label">WALL SIZE</div>
       <table class="wall-table">
-        <tr><td>Wall 01 <em>화이트월</em></td><td>17,000 × <input type="number" class="tbl-input" data-wall-height="wall01" step="50" inputmode="numeric" /> mm</td><td class="tag opaque">불투명</td></tr>
-        <tr><td>Wall 02 <em>반투명 1</em></td><td>7,000 × <input type="number" class="tbl-input" data-wall-height="wall02" step="50" inputmode="numeric" /> mm</td><td class="tag translucent">반투명</td></tr>
-        <tr><td>통로 <em>Wall02·03 사이</em></td><td>1,400 mm</td><td></td></tr>
-        <tr><td>Wall 03 <em>반투명 2</em></td><td>8,000 × <input type="number" class="tbl-input" data-wall-height="wall03" step="50" inputmode="numeric" /> mm</td><td class="tag translucent">반투명</td></tr>
-        <tr class="total-row"><td>TOTAL</td><td>33,400 mm</td><td></td></tr>
+        <tr><td>Wall 01 <em>화이트월</em></td><td><input type="number" class="tbl-input" data-wall-length="wall01" step="100" inputmode="numeric" /> × <input type="number" class="tbl-input" data-wall-height="wall01" step="50" inputmode="numeric" /> mm</td><td class="tag opaque">불투명</td></tr>
+        <tr><td>Wall 02 <em>반투명 1</em></td><td><input type="number" class="tbl-input" data-wall-length="wall02" step="100" inputmode="numeric" /> × <input type="number" class="tbl-input" data-wall-height="wall02" step="50" inputmode="numeric" /> mm</td><td class="tag translucent">반투명</td></tr>
+        <tr><td>통로 <em>Wall02·03 사이</em></td><td><input type="number" class="tbl-input" id="wall-gap" step="100" inputmode="numeric" /> mm</td><td></td></tr>
+        <tr><td>Wall 03 <em>반투명 2</em></td><td><input type="number" class="tbl-input" data-wall-length="wall03" step="100" inputmode="numeric" /> × <input type="number" class="tbl-input" data-wall-height="wall03" step="50" inputmode="numeric" /> mm</td><td class="tag translucent">반투명</td></tr>
+        <tr class="total-row"><td>TOTAL</td><td><span id="wall-total"></span> mm</td><td></td></tr>
       </table>
-      <button class="tbl-reset" id="btn-wall-reset">높이 기본값으로 되돌리기</button>
-      <div class="wall-shape-note">높이(× 뒤 숫자)를 바꾸면 LAYOUT·3D에 바로 반영됩니다. 포스터 시안은 바닥 기준으로 그대로 두고, 벽이 낮아지면 윗부분이 잘립니다.</div>
-      <div class="wall-shape-note">ㄱ자(L자) 구조 — 화이트월(17m)에서 90도 꺾여 반투명벽 두 장(7m+8m)이 1.4m 통로를 사이에 두고 같은 직선으로 이어짐</div>
+      <button class="tbl-reset" id="btn-wall-reset">벽 크기 기본값으로 되돌리기</button>
+      <div class="wall-shape-note">길이 × 높이와 통로 폭을 바꾸면 LAYOUT·3D에 바로 반영됩니다. 포스터 시안은 원래 크기 그대로 벽 시작점·바닥에 맞춰 두고, 벽이 작아지면 넘치는 부분이 잘립니다.</div>
+      <div class="wall-shape-note">ㄱ자(L자) 구조 — 화이트월(Wall 01)에서 90도 꺾여 반투명벽 두 장(Wall 02·03)이 통로를 사이에 두고 같은 직선으로 이어짐</div>
     </section>
 
     <section class="ctrl-group">
@@ -112,9 +112,9 @@
       <table class="wall-table">
         <tr><td>가로 × 깊이 × 층고</td><td>31,000 × 20,000 × 5,000 mm</td><td></td></tr>
         <tr><td>Wall01 ↔ 왼쪽 외벽</td><td>11,500 mm</td><td></td></tr>
-        <tr><td>Wall01 ↔ 전면 창</td><td>2,500 mm</td><td></td></tr>
+        <tr><td>Wall01 ↔ 전면 창</td><td><span id="space-wall01-window"></span> mm</td><td></td></tr>
         <tr><td>Wall01 ↔ 상단 외벽</td><td>2,600 mm</td><td></td></tr>
-        <tr><td>Wall03 ↔ 하단 외벽</td><td>1,000 mm</td><td></td></tr>
+        <tr><td>Wall03 ↔ 하단 외벽</td><td><span id="space-wall03-bottom"></span> mm</td><td></td></tr>
         <tr><td>테이블 ↔ 테이블</td><td>1,850 mm</td><td></td></tr>
         <tr><td>Wall02·03 ↔ 도록 테이블</td><td>4,350 mm</td><td></td></tr>
         <tr><td>전시 소개 벽 <em>8,300 × 2,500</em> ↔ 하단 외벽(출입구 커튼벽)</td><td>2,750 mm</td><td></td></tr>

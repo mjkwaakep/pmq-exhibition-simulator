@@ -8,7 +8,7 @@
 // 세 그룹 모두 "3D 옵션" 체크박스로 켜고 끈다.
 // ============================================================================
 import * as THREE from 'three';
-import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS, GAP_BETWEEN_TRANSLUCENT_MM } from './constants.js';
+import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS } from './constants.js';
 import { tableSettings } from './table-settings.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
@@ -57,14 +57,13 @@ export function buildDimensions() {
   const cx = w1.origin.x / 1000, cz = w1.origin.z / 1000;
   const L1 = w1.lengthMM / 1000, h1 = w1.heightMM / 1000;
   const L2 = w2.lengthMM / 1000, L3 = w3.lengthMM / 1000, h2 = w2.heightMM / 1000;
-  const gap = GAP_BETWEEN_TRANSLUCENT_MM / 1000;
-  const z2e = cz + L2, z3s = z2e + gap, z3e = z3s + L3;
+  const z2e = cz + L2, z3s = w3.origin.z / 1000, z3e = z3s + L3; // 통로 폭은 wall-settings.js가 Wall03 위치로 반영한다
 
   // 벽
   dim([cx, h1, cz], [cx + L1, h1, cz], [0, 0.35, 0]);            // Wall 01 길이
   dim([cx + L1, 0, cz], [cx + L1, h1, cz], [0.45, 0, 0]);        // Wall 01 높이
   dim([cx, h2, cz], [cx, h2, z2e], [0, 0.35, 0]);                // Wall 02 길이
-  dim([cx, h2, z2e], [cx, h2, z3s], [0, 0.35, 0]);               // 통로
+  if (z3s > z2e) dim([cx, h2, z2e], [cx, h2, z3s], [0, 0.35, 0]); // 통로
   dim([cx, h2, z3s], [cx, h2, z3e], [0, 0.35, 0]);               // Wall 03 길이
   dim([cx, 0, z3e], [cx, h2, z3e], [0, 0, 0.3]);                 // Wall 02·03 높이
 

@@ -1,9 +1,9 @@
-import { WALLS, POSTER_SIZES } from './constants.js';
+import { WALLS, POSTER_SIZES, ROOM_WIDTH_MM, ROOM_DEPTH_MM } from './constants.js';
 import { buildLayout, countsSummary, autoFillWallCounts } from './pack.js';
 import { renderLayoutView } from './view-layout.js';
 import { PosterWall3D } from './view-3d.js';
 import { tableSettings, TABLE_LIMITS, setTableValue, resetTableSettings } from './table-settings.js';
-import { WALL_HEIGHT_LIMITS, setWallHeight, resetWallHeights } from './wall-settings.js';
+import { WALL_HEIGHT_LIMITS, getWallGap, setWallHeight, setWallLength, setWallGap, resetWallSizes } from './wall-settings.js';
 
 const state = {
   pool: [],
@@ -233,23 +233,33 @@ function wireTableSettings() {
   sync();
 }
 
-// WALL SIZE의 높이 입력 — 값이 바뀌면 LAYOUT/3D의 벽과 치수선을 다시 짓는다.
-function wireWallHeights() {
-  const inputs = [...document.querySelectorAll('[data-wall-height]')];
-  const sync = () => inputs.forEach((input) => { input.value = WALLS.find((w) => w.id === input.dataset.wallHeight).heightMM; });
-  const apply = () => { recompute(); if (three) three.rebuildDimensions(); };
-  inputs.forEach((input) => {
+// WALL SIZE의 길이·높이·통로 입력 — 값이 바뀌면 LAYOUT/3D의 벽과 치수선을 다시 짓는다.
+function wireWallSizes() {
+  const byId = (id) => WALLS.find((w) => w.id === id);
+  const heights = [...document.querySelectorAll('[data-wall-height]')];
+  const lengths = [...document.querySelectorAll('[data-wall-length]')];
+  const gap = document.getElementById('wall-gap');
+  const fmt = (mm) => Math.round(mm).toLocaleString('en-US');
+  const sync = () => {
+    heights.forEach((input) => { input.value = byId(input.dataset.wallHeight).heightMM; });
+    lengths.forEach((input) => { input.value = byId(input.dataset.wallLength).lengthMM; });
+    gap.value = getWallGap();
+    // 벽 크기에서 따라 나오는 값(합계, 외벽까지 남는 거리)
+    const [w1, , w3] = WALLS;
+    document.getElementById('wall-total').textContent = fmt(WALLS.reduce((s, w) => s + w.lengthMM, 0) + getWallGap());
+    document.getElementById('space-wall01-window').textContent = fmt(ROOM_WIDTH_MM - w1.origin.x - w1.lengthMM);
+    document.getElementById('space-wall03-bottom').textContent = fmt(ROOM_DEPTH_MM - w3.origin.z - w3.lengthMM);
+  };
+  const apply = () => { sync(); recompute(); if (three) three.rebuildDimensions(); };
+  heights.forEach((input) => {
     [input.min, input.max] = WALL_HEIGHT_LIMITS;
-    input.addEventListener('change', () => {
-      input.value = setWallHeight(input.dataset.wallHeight, input.value);
-      apply();
-    });
+    input.addEventListener('change', () => { setWallHeight(input.dataset.wallHeight, input.value); apply(); });
   });
-  document.getElementById('btn-wall-reset').addEventListener('click', () => {
-    resetWallHeights();
-    sync();
-    apply();
+  lengths.forEach((input) => {
+    input.addEventListener('change', () => { setWallLength(input.dataset.wallLength, input.value); apply(); });
   });
+  gap.addEventListener('change', () => { setWallGap(gap.value); apply(); });
+  document.getElementById('btn-wall-reset').addEventListener('click', () => { resetWallSizes(); apply(); });
   sync();
 }
 
@@ -265,7 +275,7 @@ async function main() {
   wireCameraButtons();
   wireSceneToggles();
   wireTableSettings();
-  wireWallHeights();
+  wireWallSizes();
   await loadPool();
 
   // 기본값: 3벽 모두 "꽉 채우기" 결과로 시작 (레퍼런스처럼 A0/A1/A2가 고르게 섞여 촘촘하게 채워짐)

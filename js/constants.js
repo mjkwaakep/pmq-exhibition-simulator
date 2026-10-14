@@ -43,7 +43,8 @@ export const WALLS = [
     name: 'Wall 01',
     shortLabel: '화이트월 (불투명)',
     lengthMM: 17000,
-    heightMM: WALL_HEIGHT_MM,        // 사이드바 WALL SIZE에서 바꿀 수 있다(wall-settings.js)
+    imageLengthMM: 17000,            // 시안 이미지를 만든 기준 길이 — 고정
+    heightMM: WALL_HEIGHT_MM,        // 길이·높이는 사이드바 WALL SIZE에서 바꿀 수 있다(wall-settings.js)
     imageHeightMM: WALL_HEIGHT_MM,   // 시안 이미지(image)를 만든 기준 높이 — 고정
     material: 'opaque',
     origin: { x: CORNER.x, z: CORNER.z },
@@ -57,6 +58,7 @@ export const WALLS = [
     name: 'Wall 02',
     shortLabel: '반투명벽 1',
     lengthMM: 7000,
+    imageLengthMM: 7000,
     heightMM: TRANSLUCENT_WALL_HEIGHT_MM,
     imageHeightMM: TRANSLUCENT_WALL_HEIGHT_MM,
     material: 'translucent',
@@ -71,6 +73,7 @@ export const WALLS = [
     name: 'Wall 03',
     shortLabel: '반투명벽 2',
     lengthMM: 8000,
+    imageLengthMM: 8000,
     heightMM: TRANSLUCENT_WALL_HEIGHT_MM,
     imageHeightMM: TRANSLUCENT_WALL_HEIGHT_MM,
     material: 'translucent',

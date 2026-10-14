@@ -3,6 +3,7 @@
 // view-3d.js(_buildProps)와 site-extras.js(buildDimensions)가 같은 객체를 읽는다.
 // ============================================================================
 import { WALLS } from './constants.js';
+import { VIEW_ONLY, VIEW_PARAMS } from './share.js';
 
 export const TABLE_DEFAULTS = {
   bookLen: 8300, bookDep: 500,   // 도록 테이블 4개
@@ -64,10 +65,11 @@ export function resetTableSettings(walls = false) {
 }
 
 function saveTableSettings() {
+  if (VIEW_ONLY) return; // 보기 전용 링크에서는 저장하지 않는다
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tableSettings)); } catch (e) { /* 저장 불가 환경은 무시 */ }
 }
 
 try {
-  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  const saved = VIEW_ONLY ? (VIEW_PARAMS.t || {}) : JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
   Object.keys(TABLE_DEFAULTS).forEach((k) => { if (k in saved) tableSettings[k] = clampTableValue(k, saved[k]); });
 } catch (e) { /* 저장값이 깨졌으면 기본값 */ }

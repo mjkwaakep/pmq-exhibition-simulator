@@ -3,6 +3,7 @@ import { buildLayout, countsSummary, autoFillWallCounts } from './pack.js';
 import { renderLayoutView } from './view-layout.js';
 import { PosterWall3D } from './view-3d.js';
 import { tableSettings, TABLE_LIMITS, setTableValue, resetTableSettings, bookTableZs } from './table-settings.js';
+import { VIEW_ONLY, VIEW_PARAMS, makeViewLink } from './share.js';
 import { WALL_HEIGHT_LIMITS, getWallGap, setWallHeight, setWallLength, setWallGap, resetWallSizes } from './wall-settings.js';
 
 const state = {
@@ -283,6 +284,34 @@ function wireWallSizes() {
   sync();
 }
 
+// 편집 화면: 지금 설정을 담은 보기 전용 링크를 만들어 복사한다.
+// 보기 전용 화면: 수정 칸을 잠그고, 링크에 담긴 전시 버전을 고른다.
+function wireViewOnly() {
+  if (VIEW_ONLY) {
+    document.body.classList.add('view-only');
+    document.querySelectorAll('.tbl-input').forEach((input) => { input.readOnly = true; input.tabIndex = -1; });
+    const ver = document.querySelector(`.ver-btn[data-ver="${VIEW_PARAMS.v}"]`);
+    if (ver) ver.click();
+    return;
+  }
+  const btn = document.getElementById('btn-share');
+  const out = document.getElementById('share-link');
+  btn.addEventListener('click', async () => {
+    const link = makeViewLink({
+      t: tableSettings,
+      h: Object.fromEntries(WALLS.map((w) => [w.id, w.heightMM])),
+      l: { ...Object.fromEntries(WALLS.map((w) => [w.id, w.lengthMM])), gap: getWallGap() },
+      v: document.querySelector('.ver-btn.active')?.dataset.ver,
+    });
+    out.value = link;
+    out.hidden = false;
+    out.select();
+    try { await navigator.clipboard.writeText(link); btn.textContent = '복사됨 — 기획자에게 이 링크를 보내세요'; }
+    catch (e) { btn.textContent = '아래 링크를 복사해 보내세요'; }
+    setTimeout(() => { btn.textContent = '보기 전용 링크 복사'; }, 3000);
+  });
+}
+
 async function main() {
   // 모든 벽이 시안 이미지로 고정돼 있으면 자동 배치용 컨트롤(수량·간격·랜덤)은 숨긴다.
   if (WALLS.every((w) => w.image)) {
@@ -307,6 +336,7 @@ async function main() {
   });
 
   recompute();
+  wireViewOnly(); // 3D 뷰가 만들어진 뒤라야 링크의 전시 버전을 적용할 수 있다
   document.getElementById('loading').hidden = true;
 }
 

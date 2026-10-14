@@ -183,3 +183,21 @@ body {
   .panel { width: 100%; height: auto; max-height: 45vh; }
   .stage { height: 55vh; }
 }
+
+/* ---------- 보기 전용 링크 ---------- */
+.share-link {
+  width: 100%; margin-top: 8px; padding: 6px 8px; font: inherit; font-size: 11px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text-dim);
+}
+.view-only-badge { display: none; }
+body.view-only .view-only-badge { display: inline; color: var(--accent-2); }
+body.view-only .edit-only, body.view-only .tbl-reset, body.view-only [data-auto-layout] { display: none !important; }
+/* 치수 입력칸은 잠근 채 글자처럼 보이게 */
+body.view-only .tbl-input { background: transparent; border-color: transparent; pointer-events: none; padding: 0; width: 3.4em; }
+/* 표시 옵션 체크박스를 눌러 켜고 끄는 버튼으로 */
+body.view-only .toggle-row {
+  border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2);
+  padding: 7px 10px; margin-bottom: 6px; color: var(--text-dim);
+}
+body.view-only .toggle-row input { display: none; }
+body.view-only .toggle-row:has(input:checked) { border-color: var(--accent-2); color: var(--accent-2); }

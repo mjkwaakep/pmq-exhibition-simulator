@@ -11,7 +11,7 @@
   (function () {
     var v = Date.now();
     var imports = { three: './vendor/three.module.min.js' };
-    ['app', 'constants', 'pack', 'site-extras', 'table-settings', 'view-3d', 'view-layout', 'wall-image', 'wall-settings'].forEach(function (n) {
+    ['app', 'constants', 'pack', 'site-extras', 'table-settings', 'view-3d', 'view-layout', 'wall-image', 'wall-settings', 'share'].forEach(function (n) {
       imports['./js/' + n + '.js'] = './js/' + n + '.js?v=' + v;
     });
     var map = document.createElement('script');
@@ -28,8 +28,14 @@
   <aside class="panel">
     <div class="brand">
       <div class="brand-title">PMQ POSTER WALL</div>
-      <div class="brand-sub">설치 전 레이아웃 · 3D 시뮬레이터</div>
+      <div class="brand-sub">설치 전 레이아웃 · 3D 시뮬레이터<span class="view-only-badge"> · 보기 전용</span></div>
     </div>
+
+    <section class="ctrl-group edit-only">
+      <button class="action-btn primary" id="btn-share">보기 전용 링크 복사</button>
+      <input type="text" class="share-link" id="share-link" readonly hidden />
+      <div class="wall-shape-note">지금 화면의 벽·테이블 치수와 전시 버전을 담은 링크입니다. 받은 사람은 수정할 수 없고, 보기 옵션만 바꿔 볼 수 있습니다.</div>
+    </section>
 
     <section class="ctrl-group">
       <div class="ctrl-label">VIEW</div>
@@ -94,7 +100,7 @@
         <tr><td>서문 벽 <em>커튼 선에서 시작 · 컴퓨터 벽 끝에 맞춤</em></td><td><input type="number" class="tbl-input" data-table="prefaceLen" step="50" inputmode="numeric" /> × <input type="number" class="tbl-input" data-table="prefaceH" step="50" inputmode="numeric" /> mm</td><td class="tag opaque">불투명</td></tr>
       </table>
       <button class="tbl-reset" id="btn-wall-reset">벽 크기 기본값으로 되돌리기</button>
-      <div class="wall-shape-note">길이 × 높이와 통로 폭을 바꾸면 LAYOUT·3D에 바로 반영됩니다. 포스터 시안은 원래 크기 그대로 벽 시작점·바닥에 맞춰 두고, 벽이 작아지면 넘치는 부분이 잘립니다.</div>
+      <div class="wall-shape-note edit-only">길이 × 높이와 통로 폭을 바꾸면 LAYOUT·3D에 바로 반영됩니다. 포스터 시안은 원래 크기 그대로 벽 시작점·바닥에 맞춰 두고, 벽이 작아지면 넘치는 부분이 잘립니다.</div>
       <div class="wall-shape-note">ㄱ자(L자) 구조 — 화이트월(Wall 01)에서 90도 꺾여 반투명벽 두 장(Wall 02·03)이 통로를 사이에 두고 같은 직선으로 이어짐</div>
     </section>
 
@@ -110,7 +116,7 @@
         <tr><td>iMac 24" <em>보조 테이블마다 1대</em></td><td>547 × 461 × 147 mm</td></tr>
       </table>
       <button class="tbl-reset" id="btn-table-reset">기본값으로 되돌리기</button>
-      <div class="wall-shape-note">숫자를 바꾸면 3D 뷰의 테이블과 치수선에 바로 반영됩니다(이 브라우저에 저장).</div>
+      <div class="wall-shape-note edit-only">숫자를 바꾸면 3D 뷰의 테이블과 치수선에 바로 반영됩니다(이 브라우저에 저장).</div>
     </section>
 
     <section class="ctrl-group">

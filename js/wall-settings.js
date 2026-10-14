@@ -5,6 +5,7 @@
 // 맞춰 두고 늘이거나 줄이지 않는다 — 벽이 커지면 빈 벽이 남고, 작아지면 이미지가 잘린다.
 // ============================================================================
 import { WALLS, ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, GAP_BETWEEN_TRANSLUCENT_MM } from './constants.js';
+import { VIEW_ONLY, VIEW_PARAMS } from './share.js';
 
 const [W1, W2, W3] = WALLS;
 const MIN_LEN = 1000;
@@ -24,6 +25,7 @@ const legRoom = () => ROOM_DEPTH_MM - W1.origin.z;
 function place() { W3.origin.z = W2.origin.z + W2.lengthMM + gapMM; }
 
 function save() {
+  if (VIEW_ONLY) return; // 보기 전용 링크에서는 저장하지 않는다
   try {
     localStorage.setItem(HEIGHT_KEY, JSON.stringify(Object.fromEntries(WALLS.map((w) => [w.id, w.heightMM]))));
     localStorage.setItem(LENGTH_KEY, JSON.stringify({ ...Object.fromEntries(WALLS.map((w) => [w.id, w.lengthMM])), gap: gapMM }));
@@ -66,9 +68,9 @@ export function resetWallSizes() {
 }
 
 try {
-  const h = JSON.parse(localStorage.getItem(HEIGHT_KEY) || '{}');
+  const h = VIEW_ONLY ? (VIEW_PARAMS.h || {}) : JSON.parse(localStorage.getItem(HEIGHT_KEY) || '{}');
   WALLS.forEach((w) => { if (w.id in h) w.heightMM = clamp(num(h[w.id], w.heightMM), ...WALL_HEIGHT_LIMITS); });
-  const l = JSON.parse(localStorage.getItem(LENGTH_KEY) || '{}');
+  const l = VIEW_ONLY ? (VIEW_PARAMS.l || {}) : JSON.parse(localStorage.getItem(LENGTH_KEY) || '{}');
   const lens = WALLS.map((w) => clamp(num(l[w.id], w.lengthMM), MIN_LEN, ROOM_WIDTH_MM));
   const gap = clamp(num(l.gap, gapMM), ...WALL_GAP_LIMITS);
   // 저장값이 방을 벗어나면(직접 고친 경우 등) 통째로 버리고 기본값을 쓴다.

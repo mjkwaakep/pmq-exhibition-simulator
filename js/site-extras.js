@@ -3,6 +3,8 @@
 //   buildDimensions : 스케치업처럼 화면에 띄우는 치수선(벽·통로·테이블·간격)
 //   buildFlow       : 02_포스터월_위치표시.pdf에 표시된 관람 동선 화살표
 //   buildSite       : Qube 현장 사진(04_현장사진4)처럼 보이게 하는 마감(카펫·검은 천장·커튼 등)
+//   buildColumns    : 원본 도면(Qube information sheet)의 콘크리트 기둥 6개
+//   buildExitZones  : 같은 도면의 "No Obstruction Emergency Exit" 구역(비워 둬야 하는 비상구 앞)
 // 세 그룹 모두 "3D 옵션" 체크박스로 켜고 끈다.
 // ============================================================================
 import * as THREE from 'three';
@@ -300,7 +302,15 @@ export function buildSite() {
   };
   const doorX1 = 24.8, doorX2 = 27.8, pierW = 1.2; // 출입문 — 원본 도면의 EXIT A(왼쪽 커튼에서 약 26.4m)
   curtain(W - pierW, (W - pierW) / 2, 0.07, 0);                                   // 상단 외벽
-  curtain(doorX1, doorX1 / 2, D - 0.07, Math.PI);                                 // 하단 외벽(문 왼쪽)
+  // 하단 외벽: 가운데 구간(x 5.8~24.0m)의 커튼은 벽에서 700mm 앞에 걸려 있고, 양 끝 구간은 벽에 붙어 있다
+  // (Qube 커튼 깊이 도면). 왼쪽 끝 구간에는 EXIT B(Lift 2 옆 외여닫이문) 자리를 비운다.
+  const exitB1 = 3.3, exitB2 = 4.25, midX1 = 5.8, midX2 = 24.0, midOff = 0.7;
+  const bottomRun = (x1, x2, off = 0.07) => curtain(x2 - x1, (x1 + x2) / 2, D - off, Math.PI);
+  bottomRun(0, exitB1);
+  bottomRun(exitB2, midX1);
+  bottomRun(midX1, midX2, midOff);
+  bottomRun(midX2, doorX1);                                                       // 하단 외벽(문 왼쪽)
+  [midX1, midX2].forEach((x) => curtain(midOff - 0.07, x, D - (midOff + 0.07) / 2, Math.PI / 2)); // 앞으로 나온 구간의 양 끝 막음
   curtain(W - pierW - doorX2, (doorX2 + W - pierW) / 2, D - 0.07, Math.PI);       // 하단 외벽(문 오른쪽)
   curtain(D, 0.07, D / 2, Math.PI / 2);                                           // 왼쪽 외벽
 
@@ -331,6 +341,30 @@ export function buildSite() {
   const exitSign = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.04), new THREE.MeshBasicMaterial({ color: 0x1fbf5a, fog: false }));
   exitSign.position.set((doorX1 + doorX2) / 2, doorH + 0.22, D - 0.1);
   perim.add(exitSign);
+
+  // EXIT B: 외여닫이 문 한 짝 + 초록 EXIT 표시
+  {
+    const bW = exitB2 - exitB1, bCx = (exitB1 + exitB2) / 2, bH = 2.1;
+    const above = new THREE.Mesh(new THREE.PlaneGeometry(bW, curtainH - bH), new THREE.MeshStandardMaterial({ color: 0xdcdad4, roughness: 0.9 }));
+    above.rotation.y = Math.PI;
+    above.position.set(bCx, bH + (curtainH - bH) / 2, D - 0.05);
+    perim.add(above);
+    const leafB = new THREE.Mesh(new THREE.PlaneGeometry(bW - 0.08, bH - 0.04), new THREE.MeshStandardMaterial({ color: 0x4a4c50, roughness: 0.7, metalness: 0.2 }));
+    leafB.rotation.y = Math.PI;
+    leafB.position.set(bCx, bH / 2, D - 0.05);
+    perim.add(leafB);
+    [exitB1, exitB2].forEach((x) => {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, bH, 0.06), frameMat);
+      post.position.set(x, bH / 2, D - 0.05);
+      perim.add(post);
+    });
+    const lintelB = new THREE.Mesh(new THREE.BoxGeometry(bW, 0.06, 0.06), frameMat);
+    lintelB.position.set(bCx, bH, D - 0.05);
+    perim.add(lintelB);
+    const signB = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.04), new THREE.MeshBasicMaterial({ color: 0x1fbf5a, fog: false }));
+    signB.position.set(bCx, bH + 0.22, D - 0.1);
+    perim.add(signB);
+  }
 
   // 전면 창 쪽: 가운데는 바닥부터 올라오는 통유리, 양옆은 벽기둥 + 젖혀 둔 검은 커튼, 위는 내려온 천장
   const x = W - 0.03;
@@ -391,5 +425,56 @@ export function buildSite() {
   railing.position.set(W - 3.4, 0, 1.3);
   group.add(railing);
 
+  return group;
+}
+
+// ---------------------------------------------------------------- 기둥 · 비상구 확보 구역
+// 치수 출처: Qube_information_sheet_update_V3.pdf. x는 왼쪽 벽면, z는 상단 벽면에서 잰 값(m)이고
+// 치수가 적혀 있지 않은 값(기둥 깊이·z 위치, 왼쪽 비상구 z)은 도면에서 잰 근삿값(±0.1m)이다.
+const COLUMNS = [ // [x1, x2, z1, z2] — 600(500) × 약 1,200, 벽에서 약 1.3m 떨어져 서 있다
+  [5.59, 6.19, 1.26, 2.45], [14.614, 15.214, 1.26, 2.45], [28.171, 28.771, 1.26, 2.45],          // 상단 벽 쪽
+  [5.551, 6.051, D - 2.5, D - 1.31], [14.544, 15.144, D - 2.5, D - 1.31], [28.057, 28.657, D - 2.5, D - 1.31], // 하단 벽 쪽
+];
+const EXIT_ZONES = [ // [x1, x2, z1, z2]
+  [11.034, 12.534, 0, 2.7],        // 컨트롤 부스 옆 출구 1,500 × 2,700
+  [20.67, 28.17, 0, 1.37],         // 경사로(RAMPS) 7,500 × 1,370
+  [28.771, W, 0, 2.45],            // 오른쪽 위 출구 2,240 폭
+  [24.657, 28.057, D - 1.5, D],    // Staunton 출입구 3,400 × 1,500
+  [0, 1.5, 11.3, 12.8],            // 왼쪽 Marketplace 출입구 1,500 × 1,500
+];
+
+export function buildColumns() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xb4b2ab, roughness: 0.9, metalness: 0 });
+  COLUMNS.forEach(([x1, x2, z1, z2]) => {
+    const col = new THREE.Mesh(new THREE.BoxGeometry(x2 - x1, H, z2 - z1), mat);
+    col.position.set((x1 + x2) / 2, H / 2, (z1 + z2) / 2);
+    col.castShadow = true; col.receiveShadow = true;
+    group.add(col);
+  });
+  return group;
+}
+
+export function buildExitZones() {
+  const group = new THREE.Group();
+  const Y = 0.03;
+  const fill = new THREE.MeshBasicMaterial({ color: 0xff2d20, transparent: true, opacity: 0.28, fog: false, toneMapped: false, side: THREE.DoubleSide, depthWrite: false });
+  const pts = [];
+  EXIT_ZONES.forEach(([x1, x2, z1, z2]) => {
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(x2 - x1, z2 - z1), fill);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.set((x1 + x2) / 2, Y, (z1 + z2) / 2);
+    group.add(plane);
+    const a = new THREE.Vector3(x1, Y, z1), b = new THREE.Vector3(x2, Y, z1), c = new THREE.Vector3(x2, Y, z2), d = new THREE.Vector3(x1, Y, z2);
+    pts.push(a, b, b, c, c, d, d, a, a, c, b, d); // 테두리 + 도면과 같은 X 표시
+    const label = makeLabel('비상구 확보 구역', { fg: '#ff8a80' });
+    label.position.set((x1 + x2) / 2, 0.5, (z1 + z2) / 2);
+    group.add(label);
+  });
+  const lines = new THREE.LineSegments(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xff2d20, fog: false, toneMapped: false })
+  );
+  group.add(lines);
   return group;
 }

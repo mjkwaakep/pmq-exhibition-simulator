@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from '../vendor/OrbitControls.js';
 import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM } from './constants.js';
 import { loadWallImage } from './wall-image.js';
-import { buildDimensions, buildFlow, buildSite } from './site-extras.js';
+import { buildDimensions, buildFlow, buildSite, buildColumns, buildExitZones } from './site-extras.js';
 import { tableSettings } from './table-settings.js';
 
 const MM2M = 0.001;
@@ -91,6 +91,8 @@ export class PosterWall3D {
     this.dimsGroup = buildDimensions(); this.scene.add(this.dimsGroup);
     this.flowGroup = buildFlow(); this.scene.add(this.flowGroup);
     this.siteGroup = buildSite(); this.scene.add(this.siteGroup);
+    this.columnsGroup = buildColumns(); this.scene.add(this.columnsGroup);
+    this.exitZonesGroup = buildExitZones(); this.scene.add(this.exitZonesGroup);
     this.setSiteVisible(true);
     this._resize();
     window.addEventListener('resize', () => this._resize());
@@ -100,6 +102,8 @@ export class PosterWall3D {
 
   setDimsVisible(v) { if (this.dimsGroup) this.dimsGroup.visible = v; }
   setFlowVisible(v) { if (this.flowGroup) this.flowGroup.visible = v; }
+  setColumnsVisible(v) { if (this.columnsGroup) this.columnsGroup.visible = v; }
+  setExitZonesVisible(v) { if (this.exitZonesGroup) this.exitZonesGroup.visible = v; }
   // 현장 재현을 켜면 기존의 밝은 창(위아래 흰 띠 포함)만 잠시 숨기고, 끄면 원래대로 되돌린다.
   setSiteVisible(v) {
     this._siteOn = v;

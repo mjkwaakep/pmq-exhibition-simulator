@@ -195,7 +195,7 @@ function wireSceneToggles() {
     });
   });
 
-  [['toggle-dims', 'setDimsVisible'], ['toggle-flow', 'setFlowVisible'], ['toggle-site', 'setSiteVisible'], ['toggle-perimeter', 'setPerimeterVisible']].forEach(([id, fn]) => {
+  [['toggle-dims', 'setDimsVisible'], ['toggle-flow', 'setFlowVisible'], ['toggle-site', 'setSiteVisible'], ['toggle-perimeter', 'setPerimeterVisible'], ['toggle-columns', 'setColumnsVisible'], ['toggle-exits', 'setExitZonesVisible']].forEach(([id, fn]) => {
     document.getElementById(id).addEventListener('change', (e) => { if (three) three[fn](e.target.checked); });
   });
   document.getElementById('toggle-tables').addEventListener('change', (e) => {

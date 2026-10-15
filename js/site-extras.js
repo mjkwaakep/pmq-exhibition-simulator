@@ -61,11 +61,13 @@ export function buildDimensions() {
   const z2e = cz + L2, z3s = w3.origin.z / 1000, z3e = z3s + L3; // 통로 폭은 wall-settings.js가 Wall03 위치로 반영한다
 
   // 벽
-  dim([cx, h1, cz], [cx + L1, h1, cz], [0, 0.35, 0]);            // Wall 01 길이
+  // 벽 길이 치수에는 벽 이름을 붙인다 — 예: Wall 02 (7,000)
+  const named = (name, m) => `${name} (${fmt(m)})`;
+  dim([cx, h1, cz], [cx + L1, h1, cz], [0, 0.35, 0], named('Wall 01', L1));            // Wall 01 길이
   dim([cx + L1, 0, cz], [cx + L1, h1, cz], [0.45, 0, 0]);        // Wall 01 높이
-  dim([cx, h2, cz], [cx, h2, z2e], [0, 0.35, 0]);                // Wall 02 길이
+  dim([cx, h2, cz], [cx, h2, z2e], [0, 0.35, 0], named('Wall 02', L2));                // Wall 02 길이
   if (z3s > z2e) dim([cx, h2, z2e], [cx, h2, z3s], [0, 0.35, 0]); // 통로
-  dim([cx, h2, z3s], [cx, h2, z3e], [0, 0.35, 0]);               // Wall 03 길이
+  dim([cx, h2, z3s], [cx, h2, z3e], [0, 0.35, 0], named('Wall 03', L3));               // Wall 03 길이
   dim([cx, 0, z3e], [cx, h2, z3e], [0, 0, 0.3]);                 // Wall 02·03 높이
 
   // 도록 테이블 (view-3d.js _buildProps 와 같은 값)

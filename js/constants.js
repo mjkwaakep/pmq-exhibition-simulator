@@ -18,7 +18,7 @@ export const ROOM_WIDTH_MM = 31000;  // 가로(X)
 export const ROOM_DEPTH_MM = 20000;  // 깊이(Z) — 원본 도면의 C–D 기준선 간격 20,000
 
 // ㄱ자(L자) 구조 — 코너 하나만 있는 형태.
-//   Wall01 (불투명, 17m)              — 한쪽 다리
+//   Wall01 (불투명, 17.3m)            — 한쪽 다리
 //   Wall02 (반투명, 7m) + 통로 2m + Wall03 (반투명, 8m) — 나머지 한 다리(같은 직선,
 //     사람이 다니는 2m 통로로 갈라져 있을 뿐 90도로 더 꺾이지 않음)
 // Wall02/03을 합친 다리 길이 7+2+8=17m.
@@ -32,7 +32,7 @@ export const GAP_BETWEEN_TRANSLUCENT_MM = 1400;
 // 하단 외벽 = z:ROOM_DEPTH_MM, 전면 창 = x:ROOM_WIDTH_MM.
 // 코너(Wall01↔Wall02)는 왼쪽 외벽에서 11.5m, 상단 외벽에서 2.6m 떨어진 지점 = (11500, 2600).
 // (컨트롤 부스가 왼쪽 커튼에서 약 11.3m까지 튀어나와 있어 전시 전체를 창 쪽으로 1.5m 옮김)
-//   Wall01: 코너에서 +X로 17m(→ 오른쪽 전면 창까지 4m 남음), 법선 = world +X... 아니 +Z(안쪽)
+//   Wall01: 코너에서 +X로 17.3m(→ 오른쪽 전면 창까지 2.2m 남음), 법선 = world +X... 아니 +Z(안쪽)
 //   Wall02: 코너에서 +Z로 7m,                                법선 = world +X(안쪽)
 //   Wall03: 통로(1.4m) 건너 Wall02와 같은 직선으로 8m 이어짐(→ 하단 외벽까지 1m 남음)
 // 상단 벽 쪽 기둥(벽에서 약 1.26~2.45m)을 피하려고 Wall01을 상단 외벽에서 2.6m로 당겼다. Wall03은 그대로 두고 통로를 2m → 1.4m로 줄임.
@@ -42,8 +42,8 @@ export const WALLS = [
     id: 'wall01',
     name: 'Wall 01',
     shortLabel: '화이트월 (불투명)',
-    lengthMM: 17000,
-    imageLengthMM: 17000,            // 시안 이미지를 만든 기준 길이 — 고정
+    lengthMM: 17300,
+    imageLengthMM: 17300,            // 시안 이미지를 만든 기준 길이 — 고정
     heightMM: WALL_HEIGHT_MM,        // 길이·높이는 사이드바 WALL SIZE에서 바꿀 수 있다(wall-settings.js)
     imageHeightMM: WALL_HEIGHT_MM,   // 시안 이미지(image)를 만든 기준 높이 — 고정
     material: 'opaque',
@@ -51,7 +51,7 @@ export const WALLS = [
     rotationY: 0,
     flip: false,
     image: 'walls/wall01.png',
-    posterCount: 81,
+    posterCount: 94,
   },
   {
     id: 'wall02',
@@ -82,14 +82,14 @@ export const WALLS = [
     rotationY: -Math.PI / 2,
     flip: true,
     image: 'walls/wall03.png',
-    posterCount: 24,
+    posterCount: 25,
   },
 ];
 
 // 통로를 포함한 포스터 월 전체 구간 길이. 실제 벽 재료 길이는 이보다
 // GAP_BETWEEN_TRANSLUCENT_MM(1.4m)만큼 짧다.
-export const TOTAL_WALL_MATERIAL_MM = WALLS.reduce((s, w) => s + w.lengthMM, 0); // 34000
-export const TOTAL_SPAN_MM = TOTAL_WALL_MATERIAL_MM + GAP_BETWEEN_TRANSLUCENT_MM; // 33400
+export const TOTAL_WALL_MATERIAL_MM = WALLS.reduce((s, w) => s + w.lengthMM, 0); // 32300
+export const TOTAL_SPAN_MM = TOTAL_WALL_MATERIAL_MM + GAP_BETWEEN_TRANSLUCENT_MM; // 33700
 
 // A0/A1/A2 실제 규격 (mm, 세로형 포스터 기준 width × height)
 export const POSTER_SIZES = {

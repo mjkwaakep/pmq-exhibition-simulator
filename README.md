@@ -54,7 +54,7 @@ python3 tools/build_posters.py "PMQ Exhibition Work List EP_Selected.numbers" .
 평소 3D 미리보기는 가볍게 두고, 버튼을 누르면 지금 카메라 그대로 경로 추적(path tracing)으로
 빛 · 그림자 · 반사를 계산해 점점 선명해지는 이미지를 만든다(`js/render-pt.js`,
 `vendor/three-gpu-pathtracer.module.js` 0.0.23 + `vendor/three-mesh-bvh.module.js` 0.7.8).
-200샘플(30초 안팎)이 쌓이면 멈추고 "이미지 저장"으로 PNG를 내려받는다. 렌더 중에도 카메라를
+10초가 지나거나 120샘플이 쌓이면 멈추고 "이미지 저장"으로 PNG를 내려받는다. 렌더 중에도 카메라를
 움직일 수 있고, 움직이면 그 자리에서 다시 쌓는다. 렌더하는 동안에만:
 
 - 빛은 JAGDA의 PMQ 전시 사진처럼 밝고 고른 중성광이다. 천장에서 내려오는 넓은 스팟 6개, 창 안쪽 위의

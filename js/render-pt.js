@@ -15,10 +15,11 @@ import { ROOM_WIDTH_MM, ROOM_DEPTH_MM, ROOM_HEIGHT_MM, WALLS } from './constants
 import { removeBackground } from './wall-image.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
-const TARGET_SAMPLES = 200;  // 이만큼 쌓이면 멈춘다(이후 저장해도 같은 이미지)
-const MAX_RENDER_PIXELS = 1.8e6; // 렌더 해상도 상한(약 1650×1100) — 레티나 화면에서 4배 픽셀을 다 계산하지 않게
-const TEXTURE_SIZE = 2048;   // 경로 추적기는 모든 텍스처를 이 크기로 맞춰 쓴다 — 포스터 조각 한 장 = 2.5m 안팎
-const TILE_MAX_M = 2.5;      // 포스터 조각의 최대 폭(m)
+const TARGET_SAMPLES = 120;
+const RENDER_SECONDS = 10;   // 샘플이 덜 쌓였어도 이 시간이 지나면 멈춘다(노이즈 제거가 나머지를 다듬는다)  // 이만큼 쌓이면 멈춘다(이후 저장해도 같은 이미지)
+const MAX_RENDER_PIXELS = 1.3e6; // 렌더 해상도 상한(약 1400×930) — 레티나 화면에서 4배 픽셀을 다 계산하지 않게
+const TEXTURE_SIZE = 1024;   // 경로 추적기는 모든 텍스처를 이 크기로 맞춰 쓴다(그래픽 메모리 = 텍스처 수 × 4MB)
+const TILE_MAX_M = 1.25;     // 포스터 조각의 최대 폭(m) — 1,024px에 1.25m면 1mm당 약 0.8px
 
 // 렌더 조명 세기(경로 추적기 단위). 화면 노출은 EXPOSURE로 맞춘다.
 // JAGDA 전시(국립신미술관)처럼 천장 전체에서 고르게 내려오는 밝은 빛이 주광이고, 그림자는 옅게.
@@ -140,10 +141,10 @@ export class RealRender {
       pt.transmissiveBounces = 5;
       pt.filterGlossyFactor = 0.6;
       pt.renderDelay = 0;
-      pt.minSamples = 2;
+      pt.minSamples = 1;
       pt.fadeDuration = 0;
-      pt.dynamicLowRes = true;
-      pt.lowResScale = 0.25;
+      pt.dynamicLowRes = false; // 1/4 해상도 미리보기(깍두기 화면)는 쓰지 않는다
+      pt.rasterizeScene = false;
       const c = v.renderer.domElement;
       pt.renderScale = Math.min(1, Math.sqrt(MAX_RENDER_PIXELS / (c.width * c.height)));
       pt.textureSize.set(TEXTURE_SIZE, TEXTURE_SIZE);
@@ -156,7 +157,7 @@ export class RealRender {
       pt.setScene(v.scene, v.camera); // 몇 초 걸릴 수 있다(BVH 계산)
       if (this._stopped) return;
       this._running = true;
-      this.onStatus({ phase: 'render', text: '렌더 중', samples: 0, target: TARGET_SAMPLES });
+      this.onStatus({ phase: 'render', text: '렌더 중', progress: 0, seconds: 0 });
     } catch (e) {
       console.error(e);
       this.onStatus({ phase: 'error', text: `렌더를 시작하지 못했습니다: ${e.message}` });
@@ -173,21 +174,25 @@ export class RealRender {
     const pt = this.pt, cam = this.view.camera;
     // 카메라가 천장 위아래를 넘나들면(천장을 숨길지 말지가 바뀌면) 장면을 다시 꾸며 처음부터 렌더한다.
     if ((cam.position.y > H - 0.05) !== this._ceilingHidden) { this.restart(); return; }
-    // 렌더 중에도 카메라를 움직일 수 있다 — 움직이면 그 자리에서 다시 쌓기 시작한다.
-    cam.updateMatrixWorld();
-    if (!this._lastCam) this._lastCam = cam.matrixWorld.clone();
-    if (!this._lastCam.equals(cam.matrixWorld) || this._lastFov !== cam.fov || this._lastAspect !== cam.aspect) {
-      this._lastCam.copy(cam.matrixWorld);
-      this._lastFov = cam.fov; this._lastAspect = cam.aspect;
-      pt.updateCamera();
+    // 렌더 중에도 카메라를 움직일 수 있다 — 눈에 띄게 움직였을 때만 그 자리에서 다시 쌓는다.
+    // (마우스를 놓은 뒤 감속하며 아주 조금씩 미끄러지는 움직임까지 따라가면 매 프레임 처음부터 다시 그려 1샘플에 멈춘다.)
+    if (!this._lastPos) { this._lastPos = cam.position.clone(); this._lastQuat = cam.quaternion.clone(); this._lastAspect = cam.aspect; }
+    const moved = cam.position.distanceTo(this._lastPos) > 1e-3 || this._lastQuat.angleTo(cam.quaternion) > 2e-4 || this._lastAspect !== cam.aspect;
+    if (moved || !this._t0) {
+      this._lastPos.copy(cam.position); this._lastQuat.copy(cam.quaternion); this._lastAspect = cam.aspect;
+      if (this._t0) pt.updateCamera();
       pt.pausePathTracing = false;
+      this._t0 = performance.now();
     }
-    if (pt.samples < TARGET_SAMPLES) pt.renderSample();
+    const elapsed = (performance.now() - this._t0) / 1000;
+    const finished = pt.samples >= TARGET_SAMPLES || (elapsed >= RENDER_SECONDS && pt.samples >= 8);
+    this._progress = Math.min(1, Math.max(pt.samples / TARGET_SAMPLES, elapsed / RENDER_SECONDS));
+    if (!finished) pt.renderSample();
     else {
-      if (!pt.pausePathTracing) { pt.pausePathTracing = true; this.onStatus({ phase: 'done', text: '렌더 완료', samples: this.samples, target: TARGET_SAMPLES }); }
+      if (!pt.pausePathTracing) { pt.pausePathTracing = true; this.onStatus({ phase: 'done', text: '렌더 완료', progress: 1, seconds: elapsed }); }
       pt.renderSample(); // 멈춘 뒤에도 같은 결과를 화면에 그린다(저장용)
     }
-    if (!pt.pausePathTracing) this.onStatus({ phase: 'render', text: '렌더 중', samples: this.samples, target: TARGET_SAMPLES });
+    if (!pt.pausePathTracing) this.onStatus({ phase: 'render', text: '렌더 중', progress: this._progress, seconds: elapsed });
     if (this._saveRequest) {
       const resolve = this._saveRequest;
       this._saveRequest = null;
@@ -225,7 +230,8 @@ export class RealRender {
 
   stop() {
     this._stopped = true;
-    this._lastCam = null;
+    this._lastPos = null;
+    this._t0 = null;
     this._running = false;
     if (this.pt) this.pt.pausePathTracing = true;
     while (this._undo.length) {

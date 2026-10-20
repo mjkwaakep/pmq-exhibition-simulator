@@ -6,7 +6,7 @@ export const EN = {
   '설치 전 레이아웃 · 3D 시뮬레이터': 'Pre-installation layout · 3D simulator',
   '· 보기 전용': '· View only',
   '렌더 · 실사 이미지': 'Render · photoreal image',
-  '지금 카메라 그대로 빛과 그림자까지 계산해 고화질로 그립니다. 30초 안팎이면 선명해지고, 렌더 중에도 카메라를 움직일 수 있습니다(움직이면 그 자리에서 다시 그립니다). 다 되면 이미지로 저장하세요.': 'Renders the current camera in high quality with real light and shadows. It sharpens in about 30 seconds; you can keep moving the camera while it renders (it restarts from the new view). Save the image when it is done.',
+  '지금 카메라 그대로 빛과 그림자까지 계산해 고화질로 그립니다. 10초 안팎이면 선명해지고, 렌더 중에도 카메라를 움직일 수 있습니다(움직이면 그 자리에서 다시 그립니다). 다 되면 이미지로 저장하세요.': 'Renders the current camera in high quality with real light and shadows. It sharpens in about 10 seconds; you can keep moving the camera while it renders (it restarts from the new view). Save the image when it is done.',
   '이미지 저장': 'Save image',
   '미리보기로 돌아가기': 'Back to preview',
   '탑뷰': 'Top view',

@@ -207,8 +207,8 @@ function wireRender() {
     hud.hidden = false;
     btn.classList.add('rendering');
     status.textContent = s.phase === 'prepare' ? (T.prepare || s.text) : (T[s.phase] || s.text);
-    const pct = s.target ? Math.min(100, (s.samples / s.target) * 100) : 0;
-    count.textContent = s.target ? `${s.samples} / ${s.target}` : '';
+    const pct = s.progress != null ? Math.min(100, s.progress * 100) : 0;
+    count.textContent = s.seconds != null ? `${s.seconds.toFixed(1)}${VIEW_ONLY ? 's' : '초'}` : '';
     bar.style.width = `${pct}%`;
     save.disabled = !(s.phase === 'render' || s.phase === 'done');
   };

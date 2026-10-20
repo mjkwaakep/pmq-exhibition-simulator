@@ -18,8 +18,10 @@ const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1
 const TARGET_SAMPLES = 90;   // 이만큼 쌓이면 멈춘다(이후 저장해도 같은 이미지)
 const RENDER_SECONDS = 5;    // 샘플이 덜 쌓였어도 이 시간이 지나면 멈춘다(노이즈 제거가 나머지를 다듬는다)
 const MAX_RENDER_PIXELS = 1.6e6; // 렌더 해상도 상한(약 1550×1030) — 레티나 화면에서 4배 픽셀을 다 계산하지 않게
-const TEXTURE_SIZE = 1024;   // 경로 추적기는 모든 텍스처를 이 크기로 맞춰 쓴다(그래픽 메모리 = 텍스처 수 × 4MB)
-const TILE_MAX_M = 1.0;      // 포스터 조각의 최대 폭(m) — 1,024px에 1m면 1mm당 약 1px
+const TEXTURE_SIZE = 512;    // 경로 추적기 텍스처 크기 — 빛만 계산하므로 포스터 조각의 투명 마스크만 쓴다
+const TILE_MAX_M = 2.0;      // 포스터 조각의 최대 폭(m)
+const TILE_PX = 2048;        // 포스터 조각 한 장의 픽셀 — 2m에 2,048px면 1mm당 약 1px(색 · 무늬 패스용)
+const MAX_DETAIL_PIXELS = 4.5e6; // 색 · 무늬 패스 해상도 상한(레티나 화면 그대로에 가깝게)
 
 // 렌더 조명 세기(경로 추적기 단위). 화면 노출은 EXPOSURE로 맞춘다.
 // 맑은 낮 기준 — 통유리로 중정의 밝은 낮빛이 들어오고, 천장에서도 고르게 내려온다(JAGDA PMQ 전시처럼 밝게).
@@ -37,40 +39,58 @@ const EXPOSURE = 1.4;
 if (!('backgroundRotation' in THREE.Scene.prototype)) THREE.Scene.prototype.backgroundRotation = new THREE.Euler();
 if (!('environmentRotation' in THREE.Scene.prototype)) THREE.Scene.prototype.environmentRotation = new THREE.Euler();
 
-// 렌더 결과를 화면에 그릴 때 거치는 가벼운 노이즈 제거 — 샘플이 적어 생기는 흰 점·검은 점을 걸러 낸다.
+// 화면 합성 — 경로 추적 결과(빛 × 재질 평균색)를 빛만 남도록 부드럽게 다듬은 뒤,
+// 미리보기처럼 또렷하게 그린 색 · 무늬 비율(원래 색 ÷ 평균색)을 곱한다.
+// 경로 추적에는 무늬가 없어서 노이즈 제거가 마음껏 먹히고, 포스터 · 글자는 색 · 무늬 패스에서 그대로 온다.
 //   1) 이웃 8칸 밝기 범위 밖으로 혼자 튀는 점은 그 범위로 눌러 주고
-//   2) 밝기가 비슷한 이웃끼리만 섞는 5×5 블러(가장자리 · 포스터 글자는 지킨다)
-function makeDenoiser() {
+//   2) 7×7 범위에서 밝기가 비슷하고 같은 물체(평균색이 같은)인 이웃끼리만 섞는다
+function makeCompositor(detail) {
   const material = new THREE.ShaderMaterial({
-    uniforms: { map: { value: null }, texel: { value: new THREE.Vector2(1, 1) }, opacity: { value: 1 } },
+    uniforms: {
+      map: { value: null }, albedoMap: { value: null }, flatMap: { value: null },
+      texel: { value: new THREE.Vector2(1, 1) }, opacity: { value: 1 },
+    },
     vertexShader: /* glsl */`
       varying vec2 vUv;
       void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
     fragmentShader: /* glsl */`
-      uniform sampler2D map;
-      uniform vec2 texel;
+      uniform sampler2D map;       // 경로 추적 결과(낮은 해상도)
+      uniform sampler2D albedoMap; // 색 · 무늬 패스(원래 재질, 조명 없음)
+      uniform sampler2D flatMap;   // 평균색 패스(경로 추적과 같은 무늬 없는 재질, 조명 없음)
+      uniform vec2 texel;          // 경로 추적 결과의 한 픽셀
       uniform float opacity;
       varying vec2 vUv;
       float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
       void main() {
         vec4 c0 = texture2D(map, vUv);
-        vec3 lo = vec3(1e9), hi = vec3(-1e9);
-        for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-          if (x == 0 && y == 0) continue;
-          vec3 c = texture2D(map, vUv + vec2(float(x), float(y)) * texel).rgb;
-          lo = min(lo, c); hi = max(hi, c);
-        }
-        vec3 center = clamp(c0.rgb, lo, hi);
-        float lc = log(lum(center) + 1e-3);
-        vec3 sum = center; float wsum = 1.0;
+        vec3 f0 = texture2D(flatMap, vUv).rgb;
+        // 기준 밝기는 같은 물체의 이웃 5×5 평균 — 혼자 튀는 점(아주 밝거나 0에 가까운 점)이 기준이 되지 않게
+        vec3 mean = vec3(0.0); float mw = 0.0;
         for (int y = -2; y <= 2; y++) for (int x = -2; x <= 2; x++) {
+          vec2 o = vUv + vec2(float(x), float(y)) * texel;
+          vec3 f = texture2D(flatMap, o).rgb - f0;
+          float w = exp(-dot(f, f) / 0.002);
+          mean += texture2D(map, o).rgb * w; mw += w;
+        }
+        mean /= mw;
+        vec3 center = c0.rgb;
+        float lc = log(lum(mean) + 1e-3);
+        float cw = exp(-pow(log(lum(center) + 1e-3) - lc, 2.0) / 1.2);
+        vec3 sum = center * cw; float wsum = cw + 1e-4;
+        // 2칸 간격으로 7×7(약 13픽셀 범위) — 무늬가 빠진 빛 이미지라 넓게 섞어도 된다. 물체 경계는 평균색 차이로 지킨다.
+        for (int y = -3; y <= 3; y++) for (int x = -3; x <= 3; x++) {
           if (x == 0 && y == 0) continue;
-          vec3 c = texture2D(map, vUv + vec2(float(x), float(y)) * texel).rgb;
+          vec2 o = vUv + vec2(float(x), float(y)) * texel * 2.0;
+          vec3 c = texture2D(map, o).rgb;
+          vec3 f = texture2D(flatMap, o).rgb - f0;
           float d = log(lum(c) + 1e-3) - lc;
-          float w = exp(-float(x * x + y * y) / 5.0 - d * d / 0.09);
+          float w = exp(-float(x * x + y * y) / 8.0 - d * d / 1.2 - dot(f, f) / 0.002);
           sum += c * w; wsum += w;
         }
-        gl_FragColor = vec4(sum / wsum, c0.a * opacity);
+        vec3 light = sum / wsum;
+        vec4 a = texture2D(albedoMap, vUv);
+        vec3 ratio = a.a > 0.01 ? min((a.rgb + 0.004) / (f0 + 0.004), vec3(12.0)) : vec3(1.0);
+        gl_FragColor = vec4(light * ratio, c0.a * opacity);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
@@ -81,6 +101,8 @@ function makeDenoiser() {
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   return (target, renderer, quad) => {
     material.uniforms.map.value = target.texture;
+    material.uniforms.albedoMap.value = detail.albedo.texture;
+    material.uniforms.flatMap.value = detail.flat.texture;
     material.uniforms.texel.value.set(1 / target.width, 1 / target.height);
     material.uniforms.opacity.value = quad.material.opacity;
     const autoClear = renderer.autoClear;
@@ -90,8 +112,69 @@ function makeDenoiser() {
   };
 }
 
+// 포스터 조각 재질 → 경로 추적용 투명 마스크(재질 userData에 두면 clone이 텍스처를 JSON으로 복사한다)
+const alphaTexOf = new WeakMap();
+
+// 텍스처의 평균색(선형) — 경로 추적용 무늬 없는 재질의 색으로 쓴다.
+const meanCache = new Map();
+function meanColor(tex) {
+  const key = tex.source ? tex.source.uuid : tex.uuid;
+  if (meanCache.has(key)) return meanCache.get(key);
+  const im = tex.image;
+  const out = new THREE.Color(0.7, 0.7, 0.7);
+  try {
+    const w = im && (im.naturalWidth || im.width), h = im && (im.naturalHeight || im.height);
+    if (w && h) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 16;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(im, 0, 0, 16, 16);
+      const d = g.getImageData(0, 0, 16, 16).data;
+      let r = 0, gg = 0, b = 0, a = 0;
+      for (let i = 0; i < d.length; i += 4) { const al = d[i + 3] / 255; r += d[i] * al; gg += d[i + 1] * al; b += d[i + 2] * al; a += al; }
+      if (a > 0) {
+        out.setRGB(r / a / 255, gg / a / 255, b / a / 255, tex.colorSpace === THREE.SRGBColorSpace ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace);
+      }
+    }
+  } catch (e) { /* 다른 출처 이미지 등 — 회색으로 둔다 */ }
+  meanCache.set(key, out);
+  return out;
+}
+
 let ptModule = null;
 const loadPathTracer = () => (ptModule ||= import('../vendor/three-gpu-pathtracer.module.js'));
+
+// 벽 시안(1px = 1mm)을 조각 캔버스로 자른다: c = 색 · 무늬 패스용(TILE_PX), ac = 경로 추적용 투명 마스크(TEXTURE_SIZE).
+// 배경(벽 회색)은 미리보기와 같은 방법을 1/4 크기 사본에 돌려 마스크로 걷어낸다(원본 전체에 돌리면 메모리가 너무 든다).
+const tileCache = new Map();
+function makeTileCanvases(img, { imgL, imgH, Hm, a0, n, tw }) {
+  const mask = document.createElement('canvas');
+  mask.width = Math.round(img.naturalWidth / 4); mask.height = Math.round(img.naturalHeight / 4);
+  mask.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, mask.width, mask.height);
+  removeBackground(mask);
+  const pxPerM = img.naturalWidth / imgL, maskScale = mask.width / img.naturalWidth;
+  const sy = img.naturalHeight * (1 - Hm / imgH), sh = img.naturalHeight * (Hm / imgH);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const sx = (a0 + i * tw) * pxPerM, sw = tw * pxPerM;
+    const c = document.createElement('canvas');
+    c.width = c.height = TILE_PX;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, TILE_PX, TILE_PX);
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(mask, sx * maskScale, sy * maskScale, sw * maskScale, sh * maskScale, 0, 0, TILE_PX, TILE_PX);
+    const ac = document.createElement('canvas');
+    ac.width = ac.height = TEXTURE_SIZE;
+    const actx = ac.getContext('2d');
+    actx.drawImage(mask, sx * maskScale, sy * maskScale, sw * maskScale, sh * maskScale, 0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+    actx.globalCompositeOperation = 'source-in';
+    actx.fillStyle = '#fff'; actx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+    actx.globalCompositeOperation = 'destination-over';
+    actx.fillStyle = '#000'; actx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+    out.push({ c, ac });
+  }
+  return out;
+}
 
 const hiresUrl = (url) => url.replace('walls/', 'walls/hires/').replace(/\.png$/, '.jpg');
 
@@ -148,14 +231,16 @@ export class RealRender {
       const c = v.renderer.domElement;
       pt.renderScale = Math.min(1, Math.sqrt(MAX_RENDER_PIXELS / (c.width * c.height)));
       pt.textureSize.set(TEXTURE_SIZE, TEXTURE_SIZE);
-      this._denoise = this._denoise || makeDenoiser();
-      pt.renderToCanvasCallback = this._denoise;
+      this._detail = this._detail || { albedo: null, flat: null };
+      this._composite = this._composite || makeCompositor(this._detail);
+      pt.renderToCanvasCallback = this._composite;
       pt.pausePathTracing = false;
 
       this.onStatus({ phase: 'prepare', text: '장면 구조 계산 중…' });
       await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))); // 안내 문구가 먼저 보이게 한 프레임 쉰다
       pt.setScene(v.scene, v.camera); // 몇 초 걸릴 수 있다(BVH 계산)
       if (this._stopped) return;
+      this._renderDetail();
       this._running = true;
       this.onStatus({ phase: 'render', text: '렌더 중', progress: 0, seconds: 0 });
     } catch (e) {
@@ -180,7 +265,7 @@ export class RealRender {
     const moved = cam.position.distanceTo(this._lastPos) > 1e-3 || this._lastQuat.angleTo(cam.quaternion) > 2e-4 || this._lastAspect !== cam.aspect;
     if (moved || !this._t0) {
       this._lastPos.copy(cam.position); this._lastQuat.copy(cam.quaternion); this._lastAspect = cam.aspect;
-      if (this._t0) pt.updateCamera();
+      if (this._t0) { pt.updateCamera(); this._renderDetail(); }
       pt.pausePathTracing = false;
       this._t0 = performance.now();
     }
@@ -331,6 +416,83 @@ export class RealRender {
     await this._buildHiresWalls(rig, undo);
     this._mergeMaterials(undo);
     this._splitMultiMaterialMeshes(undo);
+    this._prepareDemodulation(undo);
+  }
+
+  /**
+   * 빛과 색을 나눠 그리기 위한 준비. 경로 추적에는 무늬를 뺀 재질(무늬의 평균색)을 넘기고,
+   * 색 · 무늬 패스(원래 재질)와 평균색 패스(무늬 없는 재질)는 조명 없이 래스터로 그린다.
+   * 투명 배경이 있는 포스터 조각은 경로 추적에도 투명 마스크(alphaMap)를 넘겨 반투명 벽이 그대로 비친다.
+   */
+  _prepareDemodulation(undo) {
+    const flatOf = new Map();
+    const meshes = [], origMats = [], ptMats = [], albedoMats = [], flatMats = [];
+    const basicOf = new Map(), flatBasicOf = new Map();
+    const toFlat = (m) => {
+      if (flatOf.has(m)) return flatOf.get(m);
+      const f = m.clone();
+      if (m.map) { f.color = m.color.clone().multiply(meanColor(m.map)); f.map = null; }
+      if (alphaTexOf.has(m)) f.alphaMap = alphaTexOf.get(m);
+      flatOf.set(m, f);
+      return f;
+    };
+    const toBasic = (m, flat) => {
+      const cache = flat ? flatBasicOf : basicOf;
+      if (cache.has(m)) return cache.get(m);
+      const emissiveOnly = m.emissive && m.emissive.getHex() && m.color.getHex() === 0;
+      const b = new THREE.MeshBasicMaterial({
+        color: emissiveOnly ? 0x000000 : m.color,
+        map: flat ? null : m.map,
+        alphaMap: flat ? (m.alphaMap || null) : null,
+        alphaTest: m.alphaTest, transparent: m.transparent, opacity: m.opacity, side: m.side,
+        depthWrite: m.depthWrite, toneMapped: false,
+      });
+      cache.set(m, b);
+      return b;
+    };
+    this.view.scene.traverseVisible((o) => {
+      if (!o.isMesh || !o.material || Array.isArray(o.material)) return;
+      const orig = o.material, flat = toFlat(orig);
+      meshes.push(o); origMats.push(orig); ptMats.push(flat); albedoMats.push(toBasic(orig, false)); flatMats.push(toBasic(flat, true));
+      o.material = flat;
+    });
+    this._demod = { meshes, ptMats, albedoMats, flatMats };
+    undo(() => {
+      meshes.forEach((o, i) => { o.material = origMats[i]; });
+      new Set([...flatOf.values(), ...basicOf.values(), ...flatBasicOf.values()]).forEach((m) => m.dispose());
+      this._demod = null;
+    });
+  }
+
+  /** 색 · 무늬 패스와 평균색 패스를 화면 해상도로 그린다(카메라가 움직일 때마다). */
+  _renderDetail() {
+    const d = this._demod;
+    if (!d) return;
+    const v = this.view, renderer = v.renderer, scene = v.scene;
+    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    const k = Math.min(1, Math.sqrt(MAX_DETAIL_PIXELS / (size.x * size.y)));
+    const w = Math.max(1, Math.floor(size.x * k)), h = Math.max(1, Math.floor(size.y * k));
+    const det = this._detail;
+    ['albedo', 'flat'].forEach((key) => {
+      if (!det[key] || det[key].width !== w || det[key].height !== h) {
+        if (det[key]) det[key].dispose();
+        det[key] = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: 4 });
+      }
+    });
+    const prevTarget = renderer.getRenderTarget(), prevBg = scene.background, prevAlpha = renderer.getClearAlpha();
+    const prevColor = renderer.getClearColor(new THREE.Color());
+    scene.background = null;
+    renderer.setClearColor(0x000000, 0);
+    [['albedo', d.albedoMats], ['flat', d.flatMats]].forEach(([key, mats]) => {
+      d.meshes.forEach((o, i) => { o.material = mats[i]; });
+      renderer.setRenderTarget(det[key]);
+      renderer.clear();
+      renderer.render(scene, v.camera);
+    });
+    d.meshes.forEach((o, i) => { o.material = d.ptMats[i]; });
+    renderer.setRenderTarget(prevTarget);
+    renderer.setClearColor(prevColor, prevAlpha);
+    scene.background = prevBg;
   }
 
   /**
@@ -607,34 +769,27 @@ export class RealRender {
       const pg = group.userData.posterGroup;
       if (!wall || !wall.image || !pg) continue;
       const face = pg.children.find((c) => c.material && c.material.userData && c.material.userData.crop);
-      let img;
-      try { img = await loadImage(hiresUrl(wall.image)); } catch (e) { console.warn(e.message); continue; }
-      if (this._stopped) return;
-      // 배경(벽 회색)을 투명하게 — 미리보기와 같은 방법을 1/4 크기 사본에 돌려 마스크로 쓴다
-      // (1px = 1mm 원본 전체에 돌리면 메모리가 너무 많이 든다).
-      const mask = document.createElement('canvas');
-      mask.width = Math.round(img.naturalWidth / 4); mask.height = Math.round(img.naturalHeight / 4);
-      mask.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, mask.width, mask.height);
-      removeBackground(mask);
-
       const imgL = (wall.imageLengthMM || wall.lengthMM) / 1000, imgH = (wall.imageHeightMM || wall.heightMM) / 1000;
       const Lm = Math.min(wall.lengthMM / 1000, imgL), Hm = Math.min(wall.heightMM / 1000, imgH);
       const flip = !!wall.flip, sign = flip ? -1 : 1;
       const a0 = flip ? imgL - Lm : 0; // 보이는 이미지 구간(이미지 왼쪽 끝에서 m)
       const n = Math.max(1, Math.ceil(Lm / TILE_MAX_M));
       const tw = Lm / n;
-      const pxPerM = img.naturalWidth / imgL, maskScale = mask.width / img.naturalWidth;
-      const sy = img.naturalHeight * (1 - Hm / imgH), sh = img.naturalHeight * (Hm / imgH);
+      // 조각 캔버스는 벽 시안 · 크기가 같으면 다시 만들지 않는다(두 번째 렌더부터 준비가 빨라진다).
+      const key = `${wall.image}|${Lm}|${Hm}|${n}|${flip}`;
+      let canvases = tileCache.get(key);
+      if (!canvases) {
+        let img;
+        try { img = await loadImage(hiresUrl(wall.image)); } catch (e) { console.warn(e.message); continue; }
+        if (this._stopped) return;
+        canvases = makeTileCanvases(img, { imgL, imgH, Hm, a0, n, tw });
+        tileCache.set(key, canvases);
+      }
       const tiles = new THREE.Group();
       for (let i = 0; i < n; i++) {
         const s0 = a0 + i * tw, s1 = s0 + tw;
-        const c = document.createElement('canvas');
-        c.width = c.height = TEXTURE_SIZE;
-        const ctx = c.getContext('2d');
-        const sx = s0 * pxPerM, sw = tw * pxPerM;
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
-        ctx.globalCompositeOperation = 'destination-in'; // 마스크의 투명한 배경만 걷어낸다
-        ctx.drawImage(mask, sx * maskScale, sy * maskScale, sw * maskScale, sh * maskScale, 0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+        const { c, ac } = canvases[i];
+        const alphaTex = new THREE.CanvasTexture(ac);
         const tex = new THREE.CanvasTexture(c);
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = v.renderer.capabilities.getMaxAnisotropy();
@@ -642,6 +797,7 @@ export class RealRender {
           new THREE.PlaneGeometry(tw, Hm),
           new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0, alphaTest: 0.5 }),
         );
+        alphaTexOf.set(mesh.material, alphaTex);
         const cx = flip ? imgL - (s0 + s1) / 2 : (s0 + s1) / 2;
         mesh.position.set(cx, Hm / 2, sign * 0.066);
         mesh.rotation.y = flip ? Math.PI : 0;
@@ -655,7 +811,7 @@ export class RealRender {
       }
       undo(() => {
         pg.remove(tiles);
-        tiles.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) { o.material.map.dispose(); o.material.dispose(); } });
+        tiles.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) { o.material.map.dispose(); if (alphaTexOf.has(o.material)) alphaTexOf.get(o.material).dispose(); o.material.dispose(); } });
       });
     }
   }

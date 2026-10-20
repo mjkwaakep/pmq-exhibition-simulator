@@ -15,23 +15,23 @@ import { ROOM_WIDTH_MM, ROOM_DEPTH_MM, ROOM_HEIGHT_MM, WALLS } from './constants
 import { removeBackground } from './wall-image.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
-const TARGET_SAMPLES = 120;
-const RENDER_SECONDS = 10;   // 샘플이 덜 쌓였어도 이 시간이 지나면 멈춘다(노이즈 제거가 나머지를 다듬는다)  // 이만큼 쌓이면 멈춘다(이후 저장해도 같은 이미지)
-const MAX_RENDER_PIXELS = 1.3e6; // 렌더 해상도 상한(약 1400×930) — 레티나 화면에서 4배 픽셀을 다 계산하지 않게
+const TARGET_SAMPLES = 90;   // 이만큼 쌓이면 멈춘다(이후 저장해도 같은 이미지)
+const RENDER_SECONDS = 5;    // 샘플이 덜 쌓였어도 이 시간이 지나면 멈춘다(노이즈 제거가 나머지를 다듬는다)
+const MAX_RENDER_PIXELS = 1.6e6; // 렌더 해상도 상한(약 1550×1030) — 레티나 화면에서 4배 픽셀을 다 계산하지 않게
 const TEXTURE_SIZE = 1024;   // 경로 추적기는 모든 텍스처를 이 크기로 맞춰 쓴다(그래픽 메모리 = 텍스처 수 × 4MB)
-const TILE_MAX_M = 1.25;     // 포스터 조각의 최대 폭(m) — 1,024px에 1.25m면 1mm당 약 0.8px
+const TILE_MAX_M = 1.0;      // 포스터 조각의 최대 폭(m) — 1,024px에 1m면 1mm당 약 1px
 
 // 렌더 조명 세기(경로 추적기 단위). 화면 노출은 EXPOSURE로 맞춘다.
-// JAGDA 전시(국립신미술관)처럼 천장 전체에서 고르게 내려오는 밝은 빛이 주광이고, 그림자는 옅게.
+// 맑은 낮 기준 — 통유리로 중정의 밝은 낮빛이 들어오고, 천장에서도 고르게 내려온다(JAGDA PMQ 전시처럼 밝게).
 const LIGHT = {
-  ceilingSoft: 70,   // 천장에서 내려오는 넓은 스팟 하나(6개) — 전시장 전체를 고르게 밝힌다
-  window: 120,       // 창 안쪽 위 넓은 스팟 하나(4개) = 중정에서 들어오는 확산광
-  sun: 1.1,          // 창으로 들어오는 직사광 — 창 앞에 또렷한 그림자를 만든다
+  ceilingSoft: 120,  // 천장에서 내려오는 넓은 스팟 하나(6개) — 전시장 전체를 고르게 밝힌다
+  window: 320,       // 창 안쪽 위 넓은 스팟 하나(4개) = 중정에서 들어오는 낮빛
+  sun: 2.2,          // 창으로 들어오는 낮 햇빛 — 창 앞에 또렷한 빛 자국과 그림자
   ceilingLine: 2.0,  // 천장 라인조명
   sign: 1.5,         // 비상구 표시등
 };
 const NEUTRAL_WHITE = 0xfffaf3; // 4500K 안팎 — 따뜻한 노란빛을 뺀 전시장 흰빛
-const EXPOSURE = 1.6;
+const EXPOSURE = 1.4;
 
 // three r160의 Scene에는 아직 없는 값(r162부터) — 경로 추적기가 모든 Scene에서 읽으므로 기본값을 둔다.
 if (!('backgroundRotation' in THREE.Scene.prototype)) THREE.Scene.prototype.backgroundRotation = new THREE.Euler();
@@ -67,7 +67,7 @@ function makeDenoiser() {
           if (x == 0 && y == 0) continue;
           vec3 c = texture2D(map, vUv + vec2(float(x), float(y)) * texel).rgb;
           float d = log(lum(c) + 1e-3) - lc;
-          float w = exp(-float(x * x + y * y) / 4.5 - d * d / 0.06);
+          float w = exp(-float(x * x + y * y) / 5.0 - d * d / 0.09);
           sum += c * w; wsum += w;
         }
         gl_FragColor = vec4(sum / wsum, c0.a * opacity);
@@ -134,11 +134,11 @@ export class RealRender {
       }
       this.pt = new WebGLPathTracer(v.renderer);
       const pt = this.pt;
-      // 가볍게: 빛 반사 5번, 해상도 상한, 카메라를 움직이는 동안에는 1/4 해상도로 빠르게 미리 보여 준다.
+      // 가볍게: 빛 반사 4번, 해상도 상한, 카메라를 움직이는 동안에는 1/4 해상도로 빠르게 미리 보여 준다.
       pt.tiles.set(1, 1);
-      pt.bounces = 5;
-      // 투명 반사 횟수를 4 미만으로 줄이면 이 버전에서 픽셀 일부가 0(검은 점)으로 굳는다 — 5로 둔다.
-      pt.transmissiveBounces = 5;
+      pt.bounces = 4;
+      // 투명 반사 횟수를 4 미만으로 줄이면 이 버전에서 픽셀 일부가 0(검은 점)으로 굳는다 — 4가 최소.
+      pt.transmissiveBounces = 4;
       pt.filterGlossyFactor = 0.6;
       pt.renderDelay = 0;
       pt.minSamples = 1;
@@ -492,7 +492,7 @@ export class RealRender {
       bg.colorSpace = THREE.SRGBColorSpace;
       bg.mapping = THREE.EquirectangularReflectionMapping;
       v.scene.background = bg;
-      v.scene.backgroundIntensity = 1.2;
+      v.scene.backgroundIntensity = 1.6; // 낮의 밝은 중정
       this._undo.push(() => { bg.dispose(); v.scene.backgroundIntensity = 1; });
     } catch (e) { console.warn(e.message); }
 

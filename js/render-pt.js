@@ -1,37 +1,93 @@
 // ============================================================================
 // 실사 렌더 — 3D PERSPECTIVE의 "렌더" 버튼. 지금 카메라 그대로 경로 추적(path tracing)으로
-// 빛이 튀고 번지는 것까지 계산해 점점 선명해지는 고화질 이미지를 만든다(three-gpu-pathtracer).
+// 빛이 튀고 번지는 것까지 계산해 점점 선명해지는 이미지를 만든다(three-gpu-pathtracer).
 // 평소 미리보기는 가벼운 그대로 두고, 렌더하는 동안에만 아래를 바꿔 끼웠다가 끝나면 되돌린다.
-//   - 빛: Wall02·03 맞은편 큰 창(Aberdeen Street 쪽)으로 들어오는 햇빛과 창밖 하늘빛,
-//         포스터 벽을 비추는 천장 트랙 스팟, 천장 라인조명(실제로 빛을 낸다)
-//   - 창밖: 빛을 내는 풍경 면(나무 · 건물)을 창에서 떨어뜨려 세운다
+// 렌더 중에도 카메라를 움직일 수 있고, 움직이면 그 자리에서 다시 쌓기 시작한다.
+//   - 빛: JAGDA PMQ 전시 사진처럼 밝고 고른 중성광 — 천장에서 내려오는 넓은 스팟, 창 안쪽 위의 넓은 스팟
+//         (= 중정 확산광), 약한 햇빛, 천장 라인조명. 그림자는 부드럽지만 윤곽이 남게.
+//   - 창: 실측 통유리(04_Glass Facade — 16,987 × 6,930mm, 판 14장 · 유리 리브 · 볼트 · 위쪽 검은 커튼)
+//   - 창밖: 실내 사진에서 잘라 낸 PMQ 중정(흰 건물 · 유리 지붕 · 큰 나무)을 배경 파노라마로
 //   - 포스터: walls/hires/의 1px = 1mm 시안을 2.5m 안팎 조각으로 나눠 붙여 가까이서도 덜 깨진다
 //   - 치수선 · 동선 화살표 · 비상구 구역 · 사람 실루엣은 숨긴다
-// 참고: PMQ Qube 사진 — 검은 노출 천장(트랙 조명 · 라인조명), 둘레 검은 커튼,
-// 회갈색 카펫, Aberdeen Street 쪽 통유리 창 너머 나무와 아파트.
 // ============================================================================
 import * as THREE from 'three';
 import { ROOM_WIDTH_MM, ROOM_DEPTH_MM, ROOM_HEIGHT_MM, WALLS } from './constants.js';
 import { removeBackground } from './wall-image.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
-const TARGET_SAMPLES = 600;  // 이만큼 쌓이면 멈춘다(이후 저장해도 같은 이미지)
+const TARGET_SAMPLES = 200;  // 이만큼 쌓이면 멈춘다(이후 저장해도 같은 이미지)
+const MAX_RENDER_PIXELS = 1.8e6; // 렌더 해상도 상한(약 1650×1100) — 레티나 화면에서 4배 픽셀을 다 계산하지 않게
 const TEXTURE_SIZE = 2048;   // 경로 추적기는 모든 텍스처를 이 크기로 맞춰 쓴다 — 포스터 조각 한 장 = 2.5m 안팎
 const TILE_MAX_M = 2.5;      // 포스터 조각의 최대 폭(m)
 
 // 렌더 조명 세기(경로 추적기 단위). 화면 노출은 EXPOSURE로 맞춘다.
+// JAGDA 전시(국립신미술관)처럼 천장 전체에서 고르게 내려오는 밝은 빛이 주광이고, 그림자는 옅게.
 const LIGHT = {
-  sun: 3.2,          // 창으로 들어오는 직사광
-  outside: 3.6,      // 창밖 풍경 면의 밝기(하늘빛)
-  spot: 30,          // 포스터 벽 트랙 스팟 한 개
-  ceilingLine: 3.0,  // 천장 라인조명
-  sign: 2.0,         // 비상구 표시등
+  ceilingSoft: 70,   // 천장에서 내려오는 넓은 스팟 하나(6개) — 전시장 전체를 고르게 밝힌다
+  window: 120,       // 창 안쪽 위 넓은 스팟 하나(4개) = 중정에서 들어오는 확산광
+  sun: 1.1,          // 창으로 들어오는 직사광 — 창 앞에 또렷한 그림자를 만든다
+  ceilingLine: 2.0,  // 천장 라인조명
+  sign: 1.5,         // 비상구 표시등
 };
-const EXPOSURE = 1.5;
+const NEUTRAL_WHITE = 0xfffaf3; // 4500K 안팎 — 따뜻한 노란빛을 뺀 전시장 흰빛
+const EXPOSURE = 1.6;
 
 // three r160의 Scene에는 아직 없는 값(r162부터) — 경로 추적기가 모든 Scene에서 읽으므로 기본값을 둔다.
 if (!('backgroundRotation' in THREE.Scene.prototype)) THREE.Scene.prototype.backgroundRotation = new THREE.Euler();
 if (!('environmentRotation' in THREE.Scene.prototype)) THREE.Scene.prototype.environmentRotation = new THREE.Euler();
+
+// 렌더 결과를 화면에 그릴 때 거치는 가벼운 노이즈 제거 — 샘플이 적어 생기는 흰 점·검은 점을 걸러 낸다.
+//   1) 이웃 8칸 밝기 범위 밖으로 혼자 튀는 점은 그 범위로 눌러 주고
+//   2) 밝기가 비슷한 이웃끼리만 섞는 5×5 블러(가장자리 · 포스터 글자는 지킨다)
+function makeDenoiser() {
+  const material = new THREE.ShaderMaterial({
+    uniforms: { map: { value: null }, texel: { value: new THREE.Vector2(1, 1) }, opacity: { value: 1 } },
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+    fragmentShader: /* glsl */`
+      uniform sampler2D map;
+      uniform vec2 texel;
+      uniform float opacity;
+      varying vec2 vUv;
+      float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+      void main() {
+        vec4 c0 = texture2D(map, vUv);
+        vec3 lo = vec3(1e9), hi = vec3(-1e9);
+        for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+          if (x == 0 && y == 0) continue;
+          vec3 c = texture2D(map, vUv + vec2(float(x), float(y)) * texel).rgb;
+          lo = min(lo, c); hi = max(hi, c);
+        }
+        vec3 center = clamp(c0.rgb, lo, hi);
+        float lc = log(lum(center) + 1e-3);
+        vec3 sum = center; float wsum = 1.0;
+        for (int y = -2; y <= 2; y++) for (int x = -2; x <= 2; x++) {
+          if (x == 0 && y == 0) continue;
+          vec3 c = texture2D(map, vUv + vec2(float(x), float(y)) * texel).rgb;
+          float d = log(lum(c) + 1e-3) - lc;
+          float w = exp(-float(x * x + y * y) / 4.5 - d * d / 0.06);
+          sum += c * w; wsum += w;
+        }
+        gl_FragColor = vec4(sum / wsum, c0.a * opacity);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthTest: false, depthWrite: false,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+  mesh.frustumCulled = false;
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  return (target, renderer, quad) => {
+    material.uniforms.map.value = target.texture;
+    material.uniforms.texel.value.set(1 / target.width, 1 / target.height);
+    material.uniforms.opacity.value = quad.material.opacity;
+    const autoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    renderer.render(mesh, camera);
+    renderer.autoClear = autoClear;
+  };
+}
 
 let ptModule = null;
 const loadPathTracer = () => (ptModule ||= import('../vendor/three-gpu-pathtracer.module.js'));
@@ -63,7 +119,6 @@ export class RealRender {
     const v = this.view;
     this.active = true;
     this._stopped = false;
-    v.controls.enabled = false;
     this.onStatus({ phase: 'prepare', text: '렌더 준비 중…' });
     try {
       const { WebGLPathTracer } = await loadPathTracer();
@@ -72,19 +127,28 @@ export class RealRender {
       if (this._stopped) return;
 
       // 렌더마다 새로 만든다 — 이전 렌더의 장면 캐시(재질 번호)가 남아 있으면 재질이 엉킨다.
-      if (this.pt) this.pt.dispose();
+      if (this.pt) {
+        // 이 버전의 dispose()는 없는 필드를 건드려 오류가 나서, 렌더 타깃만 직접 정리한다.
+        try { this.pt._pathTracer.dispose(); this.pt._lowResPathTracer.dispose(); } catch (e) { /* 무시 */ }
+      }
       this.pt = new WebGLPathTracer(v.renderer);
       const pt = this.pt;
-      pt.tiles.set(2, 2);
-      pt.bounces = 7;
-      pt.transmissiveBounces = 6;
-      pt.filterGlossyFactor = 0.5;
+      // 가볍게: 빛 반사 5번, 해상도 상한, 카메라를 움직이는 동안에는 1/4 해상도로 빠르게 미리 보여 준다.
+      pt.tiles.set(1, 1);
+      pt.bounces = 5;
+      // 투명 반사 횟수를 4 미만으로 줄이면 이 버전에서 픽셀 일부가 0(검은 점)으로 굳는다 — 5로 둔다.
+      pt.transmissiveBounces = 5;
+      pt.filterGlossyFactor = 0.6;
       pt.renderDelay = 0;
-      pt.minSamples = 1;
+      pt.minSamples = 2;
       pt.fadeDuration = 0;
-      pt.dynamicLowRes = false;
-      pt.renderScale = 1;
+      pt.dynamicLowRes = true;
+      pt.lowResScale = 0.25;
+      const c = v.renderer.domElement;
+      pt.renderScale = Math.min(1, Math.sqrt(MAX_RENDER_PIXELS / (c.width * c.height)));
       pt.textureSize.set(TEXTURE_SIZE, TEXTURE_SIZE);
+      this._denoise = this._denoise || makeDenoiser();
+      pt.renderToCanvasCallback = this._denoise;
       pt.pausePathTracing = false;
 
       this.onStatus({ phase: 'prepare', text: '장면 구조 계산 중…' });
@@ -106,7 +170,18 @@ export class RealRender {
       this.view.renderer.render(this.view.scene, this.view.camera); // 준비하는 동안은 미리보기 그대로
       return;
     }
-    const pt = this.pt;
+    const pt = this.pt, cam = this.view.camera;
+    // 카메라가 천장 위아래를 넘나들면(천장을 숨길지 말지가 바뀌면) 장면을 다시 꾸며 처음부터 렌더한다.
+    if ((cam.position.y > H - 0.05) !== this._ceilingHidden) { this.restart(); return; }
+    // 렌더 중에도 카메라를 움직일 수 있다 — 움직이면 그 자리에서 다시 쌓기 시작한다.
+    cam.updateMatrixWorld();
+    if (!this._lastCam) this._lastCam = cam.matrixWorld.clone();
+    if (!this._lastCam.equals(cam.matrixWorld) || this._lastFov !== cam.fov || this._lastAspect !== cam.aspect) {
+      this._lastCam.copy(cam.matrixWorld);
+      this._lastFov = cam.fov; this._lastAspect = cam.aspect;
+      pt.updateCamera();
+      pt.pausePathTracing = false;
+    }
     if (pt.samples < TARGET_SAMPLES) pt.renderSample();
     else {
       if (!pt.pausePathTracing) { pt.pausePathTracing = true; this.onStatus({ phase: 'done', text: '렌더 완료', samples: this.samples, target: TARGET_SAMPLES }); }
@@ -138,14 +213,24 @@ export class RealRender {
     });
   }
 
+  async restart() {
+    if (this._restarting) return;
+    this._restarting = true;
+    const onStatus = this.onStatus;
+    this.stop();
+    this.onStatus = onStatus;
+    await this.start();
+    this._restarting = false;
+  }
+
   stop() {
     this._stopped = true;
+    this._lastCam = null;
     this._running = false;
     if (this.pt) this.pt.pausePathTracing = true;
     while (this._undo.length) {
       try { this._undo.pop()(); } catch (e) { console.error(e); }
     }
-    this.view.controls.enabled = true;
     this.active = false;
     this.onStatus({ phase: 'idle' });
   }
@@ -232,7 +317,8 @@ export class RealRender {
       });
     });
 
-    this._buildDaylight(rig, outsideTex);
+    await this._buildFacade(rig, setVisible);
+    this._buildSoftCeiling(rig);
     this._buildTrackSpots(rig);
     this._atlasBookCovers(undo);
     this.onStatus({ phase: 'prepare', text: '포스터 고해상도 이미지 불러오는 중…' });
@@ -309,35 +395,103 @@ export class RealRender {
     undo(() => changed.forEach(([o, m]) => { o.material = m; }));
   }
 
-  /** 창밖: 창에서 8m 떨어진 곳에 빛을 내는 풍경 면 + 창으로 비스듬히 들어오는 햇빛. */
-  _buildDaylight(rig, outsideTex) {
-    const winX = W;
-    // 창밖 사진은 채도를 낮추고 밝게 — 그대로 쓰면 잎의 초록빛이 실내 그늘을 초록으로 물들인다.
-    let tex = null;
-    if (outsideTex && outsideTex.image) {
-      const im = outsideTex.image;
-      const c = document.createElement('canvas');
-      c.width = im.naturalWidth || im.width; c.height = im.naturalHeight || im.height;
-      const ctx = c.getContext('2d');
-      ctx.filter = 'saturate(35%) brightness(118%)';
-      ctx.drawImage(im, 0, 0);
-      tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.repeat.set(2, 1);
+  /**
+   * 창 — 실측(04_Glass Facade/PMQ_Qube facade spec): 폭 16,987 × 높이 6,930mm 통유리(1.19m 안팎 판 14장,
+   * 판 사이 유리 리브 + 볼트 고정구), 위쪽에 검은 커튼 자락. 창밖은 PMQ 중정(유리 지붕 아래 초록 창틀의 흰 건물)이고
+   * 유리 지붕을 거친 밝은 확산광이 들어온다. 미리보기의 창(위아래 막힌 3.6m 창)은 렌더하는 동안만 숨긴다.
+   */
+  async _buildFacade(rig, setVisible) {
+    const v = this.view;
+    const glassW = 16.987, z1 = (D - glassW) / 2, z2 = z1 + glassW, x = W - 0.02;
+    // 미리보기의 창 쪽 마감(벽기둥 · 위쪽 검은 판 · 젖힌 커튼 · 창호 · 창밖 사진)을 숨긴다
+    const perim = v.siteGroup && v.siteGroup.userData.perimeter;
+    if (perim) {
+      const p = new THREE.Vector3();
+      perim.children.forEach((m) => { m.getWorldPosition(p); if (p.x > W - 1.2) setVisible(m, false); });
     }
-    // 풍경 면 윗변(5.5m)은 햇빛이 지나가는 높이(창 윗변 3.6m에서 8m 밖 = 약 9m)보다 낮게 둬서 빛을 막지 않는다.
-    const viewW = 34, viewTop = 5.5, viewBottom = -1, dist = 8;
-    const view = new THREE.Mesh(
-      new THREE.PlaneGeometry(viewW, viewTop - viewBottom),
-      new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: LIGHT.outside, side: THREE.DoubleSide }),
-    );
-    view.rotation.y = -Math.PI / 2;
-    view.position.set(winX + dist, (viewTop + viewBottom) / 2, D / 2);
-    rig.add(view);
+    const pierMat = new THREE.MeshStandardMaterial({ color: 0xd8d6d0, roughness: 0.9 });
+    const finMat = new THREE.MeshStandardMaterial({ color: 0x9aa6a3, roughness: 0.2, metalness: 0.1 }); // 유리 리브의 옆면(약간 어두운 청록 회색)
+    const boltMat = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.4, metalness: 0.7 });
+    const valMat = new THREE.MeshStandardMaterial({ color: 0x0b0b0b, roughness: 1 });
+    // 양옆 벽기둥(유리 밖 구간)
+    [[0, z1], [z2, D]].forEach(([a, b]) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(b - a, H), pierMat);
+      m.rotation.y = -Math.PI / 2;
+      m.position.set(x, H / 2, (a + b) / 2);
+      rig.add(m);
+    });
+    // 판 사이 유리 리브(창 안쪽으로 300mm) + 볼트 고정구
+    const panels = 14, pw = glassW / panels;
+    for (let i = 1; i < panels; i++) {
+      const z = z1 + i * pw;
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.3, H, 0.02), finMat);
+      fin.position.set(x - 0.15, H / 2, z);
+      rig.add(fin);
+      [1.0, 2.6, 4.2].forEach((y) => {
+        const bolt = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.32, 0.08), boltMat);
+        bolt.position.set(x - 0.03, y, z);
+        rig.add(bolt);
+      });
+    }
+    // 위쪽 검은 커튼 자락
+    const val = new THREE.Mesh(new THREE.PlaneGeometry(glassW + 1, 0.5), valMat);
+    val.rotation.y = -Math.PI / 2;
+    val.position.set(x - 0.4, H - 0.25, D / 2);
+    rig.add(val);
 
-    // 햇빛 — 창 쪽(+X) 위에서 약 35도로 비스듬히. 창 앞 바닥과 테이블에 빛 자국이 생긴다.
-    const sun = new THREE.DirectionalLight(0xfff0d8, LIGHT.sun);
+    // 중정 확산광 — 창 바로 안쪽 위에서 실내 쪽으로 비스듬히 내려오는 넓은 스팟 4개(반지름 1.4m라 빛이 부드럽다).
+    for (let i = 0; i < 4; i++) {
+      const z = z1 + ((i + 0.5) / 4) * glassW;
+      const l = new THREE.SpotLight(0xf3f6fa, LIGHT.window, 0, 1.2, 1, 2);
+      l.radius = 1.4;
+      l.position.set(x - 0.6, H - 0.6, z);
+      const t = new THREE.Object3D();
+      t.position.set(W - 11, 0.3, z);
+      l.target = t;
+      rig.add(l, t);
+    }
+
+    // 창밖 풍경은 "배경"으로 둔다 — 카메라에만 보이고 빛 계산에는 섞이지 않는다.
+    // (빛을 내는 면으로 세우면 그 빛이 실내 곳곳에 흰 점 노이즈로 튄다.)
+    // 배경은 방향으로 찾는 파노라마(equirect)라서 창 방향(+X)을 가운데 두고 사진을 펼친다:
+    //   왼쪽(-Z 쪽) = 유리 지붕 아래 흰 PMQ 건물(courtyard.jpg), 가운데~오른쪽 = 큰 나무와 맞은편 아파트(courtyard-tree.jpg).
+    //   둘 다 04_Glass Facade의 실내 사진에서 잘라 냈다.
+    try {
+      const [left, tree] = await Promise.all([loadImage('textures/courtyard.jpg'), loadImage('textures/courtyard-tree.jpg')]);
+      const PW = 4096, PH = 2048;
+      const c = document.createElement('canvas');
+      c.width = PW; c.height = PH;
+      const ctx = c.getContext('2d');
+      const sky = ctx.createLinearGradient(0, 0, 0, PH);
+      sky.addColorStop(0, '#d9e2ea'); sky.addColorStop(0.5, '#eef0ee'); sky.addColorStop(0.5, '#bdb9b0'); sky.addColorStop(1, '#a29f98');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, PW, PH);
+      const deg = Math.PI / 180;
+      const uOf = (az) => (az / (2 * Math.PI) + 0.5) * PW; // 방위각(+X에서 +Z 쪽으로, 실내에서 보면 오른쪽) → 가로
+      const yOf = (el) => (1 - (el / Math.PI + 0.5)) * PH;  // 올려본 각 → 세로(위가 하늘)
+      const put = (im, az0, az1, el0, el1, flip) => {
+        const x0 = uOf(az0 * deg), x1 = uOf(az1 * deg), y0 = yOf(el1 * deg), y1 = yOf(el0 * deg);
+        ctx.save();
+        if (flip) { ctx.translate(x1, 0); ctx.scale(-1, 1); ctx.drawImage(im, 0, y0, x1 - x0, y1 - y0); }
+        else ctx.drawImage(im, x0, y0, x1 - x0, y1 - y0);
+        ctx.restore();
+      };
+      ctx.filter = 'brightness(110%)';
+      put(left, -80, -42, -24, 52, true);  // 맨 왼쪽: 흰 건물(뒤집어 이어 붙임)
+      put(left, -42, -8, -24, 52, false);  // 왼쪽: 흰 건물 + 유리 지붕
+      put(tree, -8, 62, -24, 22, false);   // 가운데~오른쪽: 나무와 아파트
+      put(left, -8, 62, 22, 52, true);     // 나무 위: 유리 지붕(흰 건물 사진의 윗부분)
+      put(left, 62, 90, -24, 52, false);   // 맨 오른쪽: 흰 건물
+      const bg = new THREE.CanvasTexture(c);
+      bg.colorSpace = THREE.SRGBColorSpace;
+      bg.mapping = THREE.EquirectangularReflectionMapping;
+      v.scene.background = bg;
+      v.scene.backgroundIntensity = 1.2;
+      this._undo.push(() => { bg.dispose(); v.scene.backgroundIntensity = 1; });
+    } catch (e) { console.warn(e.message); }
+
+    // 햇빛 — 유리 지붕을 거쳐 약하게. 창 앞 바닥에 옅은 빛 자국만 생긴다.
+    const sun = new THREE.DirectionalLight(0xfff6ea, LIGHT.sun);
     const dir = new THREE.Vector3(1, 0.72, 0.38).normalize();
     const target = new THREE.Object3D();
     target.position.set(W - 6, 0, D / 2);
@@ -346,11 +500,34 @@ export class RealRender {
     rig.add(target, sun);
   }
 
-  /** 포스터 벽을 비추는 천장 트랙 스팟(검은 레일 + 조명 머리)을 벽마다 2.2m 간격으로 단다. */
+  /**
+   * 천장에서 아래로 고르게 내려오는 빛 — 크기(반지름)가 있는 넓은 스팟을 ㄱ자 안쪽 위에 격자로 둔다.
+   * (면광원 RectAreaLight는 이 버전의 경로 추적기에서 샘플을 쌓아도 사라지지 않는 노이즈를 만들어 쓰지 않는다.)
+   * 반지름이 클수록 그림자가 부드럽다 — 0.7m는 흐리멍덩하지 않게 윤곽이 남는 정도.
+   */
+  _buildSoftCeiling(rig) {
+    const y = H - 0.35;
+    const x1 = WALLS[0].origin.x / 1000 + 2.5, x2 = W - 3, z1 = WALLS[0].origin.z / 1000 + 2.5, z2 = D - 3.5;
+    const nx = 3, nz = 2;
+    for (let i = 0; i < nx; i++) {
+      for (let k = 0; k < nz; k++) {
+        const px = x1 + ((i + 0.5) / nx) * (x2 - x1), pz = z1 + ((k + 0.5) / nz) * (z2 - z1);
+        const l = new THREE.SpotLight(NEUTRAL_WHITE, LIGHT.ceilingSoft, 0, 1.15, 1, 2);
+        l.radius = 0.7;
+        l.position.set(px, y, pz);
+        const t = new THREE.Object3D();
+        t.position.set(px, 0, pz);
+        l.target = t;
+        rig.add(l, t);
+      }
+    }
+  }
+
+  /** 포스터 벽을 비추는 천장 트랙 스팟(검은 레일 + 조명 머리)을 벽마다 3.4m 간격으로 단다. */
   _buildTrackSpots(rig) {
     const railMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.5 });
     const headGeo = new THREE.CylinderGeometry(0.045, 0.06, 0.16, 16);
-    const y = H - 0.3, offset = 2.3, aimY = 1.45, step = 2.2;
+    const y = H - 0.3, offset = 2.3, aimY = 1.45, step = 3.4; // 스팟이 많으면 노이즈가 늘어 3.4m 간격
     WALLS.forEach((wall) => {
       const len = wall.lengthMM / 1000;
       const ox = wall.origin.x / 1000, oz = wall.origin.z / 1000;
@@ -370,12 +547,8 @@ export class RealRender {
         const s = (i + 0.5) * (len / n);
         const pos = new THREE.Vector3(ox, y, oz).addScaledVector(along, s).addScaledVector(inward, offset);
         const aim = new THREE.Vector3(ox, aimY, oz).addScaledVector(along, s);
-        const spot = new THREE.SpotLight(0xffe2bd, LIGHT.spot, 0, 0.5, 0.75, 2);
-        spot.position.copy(pos);
-        const t = new THREE.Object3D();
-        t.position.copy(aim);
-        spot.target = t;
-        rig.add(spot, t);
+        // 조명 기구 모양만 단다 — 실제 스팟 빛을 넣으면 광원 수만큼 경로 추적 노이즈가 늘어(샘플마다 광원 하나만 고른다)
+        // 벽면 빛은 천장 · 창 면광원이 맡는다.
         const head = new THREE.Mesh(headGeo, railMat);
         head.position.copy(pos);
         head.lookAt(aim);

@@ -953,7 +953,6 @@ export class PosterWall3D {
 
   _animate() {
     requestAnimationFrame(() => this._animate());
-    if (this.realRender.active) { this.realRender.tick(); return; } // 렌더 중에는 카메라를 고정하고 렌더만 그린다
     if (this._tween) {
       this._tween.t += 0.045;
       const t = Math.min(1, this._tween.t);
@@ -963,6 +962,7 @@ export class PosterWall3D {
       if (t >= 1) this._tween = null;
     }
     this.controls.update();
+    if (this.realRender.active) { this.realRender.tick(); return; } // 렌더 중에도 카메라는 움직이고, 그림은 렌더가 그린다
     // 사람 billboard는 항상 카메라를 정면으로 바라보게(Y축 회전만 — 발이 뜨지 않도록 기울지는 않음)
     if (this._billboards) {
       for (const b of this._billboards) {

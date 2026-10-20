@@ -225,7 +225,7 @@ function wireRender() {
   document.getElementById('render-close').addEventListener('click', stop);
   document.querySelector('.panel').addEventListener('click', (e) => {
     if (!three || !three.realRender.active) return;
-    if (e.target.closest('#btn-render')) return;
+    if (e.target.closest('#btn-render, .cam-btn')) return; // 카메라 버튼은 렌더를 멈추지 않고 그 시점에서 다시 렌더한다
     if (e.target.closest('button, input, label')) stop();
   }, true);
 }

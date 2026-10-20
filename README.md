@@ -54,13 +54,21 @@ python3 tools/build_posters.py "PMQ Exhibition Work List EP_Selected.numbers" .
 평소 3D 미리보기는 가볍게 두고, 버튼을 누르면 지금 카메라 그대로 경로 추적(path tracing)으로
 빛 · 그림자 · 반사를 계산해 점점 선명해지는 이미지를 만든다(`js/render-pt.js`,
 `vendor/three-gpu-pathtracer.module.js` 0.0.23 + `vendor/three-mesh-bvh.module.js` 0.7.8).
-600샘플이 쌓이면 멈추고, "이미지 저장"으로 PNG를 내려받는다. 렌더하는 동안에만:
+200샘플(30초 안팎)이 쌓이면 멈추고 "이미지 저장"으로 PNG를 내려받는다. 렌더 중에도 카메라를
+움직일 수 있고, 움직이면 그 자리에서 다시 쌓는다. 렌더하는 동안에만:
 
-- Aberdeen Street 쪽 큰 창 너머에 빛을 내는 풍경 면을 세우고, 창으로 비스듬히 햇빛이 들어온다.
-- 포스터 벽마다 천장 트랙 스팟(2.2m 간격)을 달고, 천장 라인조명 · 비상구 표시등이 실제로 빛을 낸다.
+- 빛은 JAGDA의 PMQ 전시 사진처럼 밝고 고른 중성광이다. 천장에서 내려오는 넓은 스팟 6개, 창 안쪽 위의
+  넓은 스팟 4개(중정 확산광), 약한 햇빛, 천장 라인조명을 쓴다.
+- 창은 실측 통유리(`04_Glass Facade` — 16,987 × 6,930mm, 판 14장 · 유리 리브 · 볼트 · 위쪽 검은 커튼)로 짓고,
+  창밖은 같은 폴더의 실내 사진에서 잘라 낸 중정(`textures/courtyard.jpg`, `textures/courtyard-tree.jpg`)을
+  배경 파노라마로 둔다(빛을 내는 면으로 두면 실내에 흰 점 노이즈가 튄다).
 - 포스터는 `walls/hires/wall0N.jpg`(피그마에서 1px = 1mm로 내보낸 시안)를 2.5m 안팎 조각으로 나눠 붙인다.
   벽 시안을 바꿀 때는 `walls/wall0N.png`와 함께 이 파일도 같이 바꿔야 렌더에 반영된다.
 - 치수선 · 동선 화살표 · 비상구 구역 · 사람 실루엣은 숨긴다.
+
+이 버전 경로 추적기의 함정(코드에 우회 처리함): 면광원(RectAreaLight)은 사라지지 않는 노이즈를 만들고,
+`transmissiveBounces`가 4 미만이면 픽셀 일부가 0으로 굳고, 재질 배열 메시가 섞이면 재질 번호가 밀리고,
+`dispose()`가 오류를 낸다.
 
 ## 물리 규칙 (절대 변경 금지 — `js/constants.js`에 고정)
 

@@ -5,7 +5,7 @@
 
 export const GAP_MM = 50;          // 포스터 사이 기본 간격 (좌우/상하 공통)
 export const WALL_HEIGHT_MM = 2500; // Wall01(화이트월) 높이
-export const TRANSLUCENT_WALL_HEIGHT_MM = 2200; // Wall02·03(반투명벽) 높이
+export const TRANSLUCENT_WALL_HEIGHT_MM = 2500; // Wall02·03(반투명벽) 높이 — A1 두 줄 중심을 바닥에서 1,450에 맞춘 시안 기준
 export const ROOM_HEIGHT_MM = 5000; // 3D 공간의 실제 층고(실측값 없어 5m 기준) — 포스터 월은 이 절반
 
 // 설치 여백(포스터를 바닥/천장/모서리에 바짝 붙이지 않기 위한 안전 여백).

@@ -10,8 +10,12 @@
   // 열 때마다 주소에 꼬리표(?v=)를 붙여 항상 최신 파일을 받는다. js/에 파일을 추가하면 아래 목록에도 넣을 것.
   (function () {
     var v = Date.now();
-    var imports = { three: './vendor/three.module.min.js' };
-    ['app', 'constants', 'pack', 'site-extras', 'table-settings', 'view-3d', 'view-layout', 'wall-image', 'wall-settings', 'share', 'i18n-en'].forEach(function (n) {
+    var imports = {
+      three: './vendor/three.module.min.js',
+      'three-mesh-bvh': './vendor/three-mesh-bvh.module.js', // 렌더(경로 추적)용
+      'three/examples/jsm/postprocessing/Pass.js': './vendor/Pass.js',
+    };
+    ['app', 'constants', 'pack', 'site-extras', 'table-settings', 'view-3d', 'view-layout', 'wall-image', 'wall-settings', 'share', 'i18n-en', 'render-pt'].forEach(function (n) {
       imports['./js/' + n + '.js'] = './js/' + n + '.js?v=' + v;
     });
     var map = document.createElement('script');
@@ -59,7 +63,10 @@
     </section>
 
     <section class="ctrl-group" id="camera-group">
-      <div class="ctrl-label">3D CAMERA</div>
+      <div class="ctrl-label">RENDER</div>
+      <button class="action-btn primary" id="btn-render">렌더 · 실사 이미지</button>
+      <div class="wall-shape-note">지금 카메라 그대로 빛과 그림자까지 계산해 고화질로 그립니다. 몇십 초에 걸쳐 점점 선명해지고, 다 되면 이미지로 저장할 수 있습니다.</div>
+      <div class="ctrl-label" style="margin-top:12px">3D CAMERA</div>
       <div class="cam-btns">
         <button class="cam-btn cam-wide" data-cam="top">탑뷰</button>
         <button class="cam-btn" data-cam="isoNW">45° ↘ 왼쪽 위에서</button>
@@ -79,7 +86,7 @@
       <div class="ctrl-label" style="margin-top:12px">3D 옵션</div>
       <label class="toggle-row"><input type="checkbox" id="toggle-tables" checked /> 테이블 표시</label>
       <label class="toggle-row"><input type="checkbox" id="toggle-people" checked /> 사람 표시</label>
-      <label class="toggle-row"><input type="checkbox" id="toggle-lights" checked /> 천장 조명(형광등) 표시</label>
+      <label class="toggle-row"><input type="checkbox" id="toggle-lights" /> 천장 조명(형광등) 표시</label>
       <label class="toggle-row"><input type="checkbox" id="toggle-dims" checked /> 치수 표시</label>
       <label class="toggle-row"><input type="checkbox" id="toggle-flow" checked /> 동선 화살표 표시</label>
       <label class="toggle-row"><input type="checkbox" id="toggle-site" checked /> 현장 재현(카펫·커튼·검은 천장)</label>
@@ -141,7 +148,17 @@
 
   <main class="stage">
     <div id="view-layout" class="view-pane"></div>
-    <div id="view-three" class="view-pane active"><div id="three-canvas"></div></div>
+    <div id="view-three" class="view-pane active">
+      <div id="three-canvas"></div>
+      <div id="render-hud" class="render-hud" hidden>
+        <div class="render-hud-text"><span id="render-status">렌더 준비 중…</span><span id="render-count"></span></div>
+        <div class="render-hud-bar"><span id="render-bar"></span></div>
+        <div class="render-hud-actions">
+          <button class="action-btn primary" id="render-save" disabled>이미지 저장</button>
+          <button class="action-btn" id="render-close">미리보기로 돌아가기</button>
+        </div>
+      </div>
+    </div>
     <div id="loading" class="loading">포스터 데이터를 불러오는 중…</div>
   </main>
 

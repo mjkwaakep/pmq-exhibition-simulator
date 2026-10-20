@@ -60,6 +60,7 @@ function renderActiveView() {
 function ensureThree() {
   if (three) return;
   three = new PosterWall3D(document.getElementById('three-canvas'));
+  three.setCeilingLightsVisible(document.getElementById('toggle-lights').checked); // 기본은 꺼짐
   three.goTo('isoSE');
 }
 
@@ -187,6 +188,46 @@ function wireCameraButtons() {
       three.goTo(btn.dataset.cam);
     });
   });
+}
+
+// 실사 렌더 — 버튼을 누르면 지금 카메라로 경로 추적 렌더를 시작하고, 왼쪽 아래에 진행 상황과 저장 버튼을 띄운다.
+// 렌더 중에 사이드바의 다른 버튼을 누르면(카메라·버전·표시 옵션 등) 렌더를 멈추고 미리보기로 돌아간다.
+function wireRender() {
+  const btn = document.getElementById('btn-render');
+  const hud = document.getElementById('render-hud');
+  const status = document.getElementById('render-status');
+  const count = document.getElementById('render-count');
+  const bar = document.getElementById('render-bar');
+  const save = document.getElementById('render-save');
+  const T = VIEW_ONLY
+    ? { prepare: 'Preparing render…', render: 'Rendering', done: 'Render complete', idle: '' }
+    : { prepare: null, render: '렌더 중', done: '렌더 완료', idle: '' };
+  const onStatus = (s) => {
+    if (s.phase === 'idle') { hud.hidden = true; btn.classList.remove('rendering'); return; }
+    hud.hidden = false;
+    btn.classList.add('rendering');
+    status.textContent = s.phase === 'prepare' ? (T.prepare || s.text) : (T[s.phase] || s.text);
+    const pct = s.target ? Math.min(100, (s.samples / s.target) * 100) : 0;
+    count.textContent = s.target ? `${s.samples} / ${s.target}` : '';
+    bar.style.width = `${pct}%`;
+    save.disabled = !(s.phase === 'render' || s.phase === 'done');
+  };
+  const stop = () => { if (three && three.realRender.active) three.realRender.stop(); };
+  btn.addEventListener('click', () => {
+    if (state.view !== 'three') document.querySelector('.view-tab[data-view="three"]').click();
+    ensureThree();
+    const r = three.realRender;
+    if (r.active) { r.stop(); return; }
+    r.onStatus = onStatus;
+    r.start();
+  });
+  save.addEventListener('click', () => three && three.realRender.save());
+  document.getElementById('render-close').addEventListener('click', stop);
+  document.querySelector('.panel').addEventListener('click', (e) => {
+    if (!three || !three.realRender.active) return;
+    if (e.target.closest('#btn-render')) return;
+    if (e.target.closest('button, input, label')) stop();
+  }, true);
 }
 
 function wireSceneToggles() {
@@ -324,6 +365,7 @@ async function main() {
   wireViewTabs();
   wireActions();
   wireCameraButtons();
+  wireRender();
   wireSceneToggles();
   wireTableSettings();
   wireWallSizes();

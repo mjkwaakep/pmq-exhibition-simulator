@@ -5,6 +5,10 @@
 export const EN = {
   '설치 전 레이아웃 · 3D 시뮬레이터': 'Pre-installation layout · 3D simulator',
   '· 보기 전용': '· View only',
+  '렌더 · 실사 이미지': 'Render · photoreal image',
+  '지금 카메라 그대로 빛과 그림자까지 계산해 고화질로 그립니다. 몇십 초에 걸쳐 점점 선명해지고, 다 되면 이미지로 저장할 수 있습니다.': 'Renders the current camera in high quality with real light and shadows. It sharpens over a few dozen seconds and can then be saved as an image.',
+  '이미지 저장': 'Save image',
+  '미리보기로 돌아가기': 'Back to preview',
   '탑뷰': 'Top view',
   '45° ↘ 왼쪽 위에서': '45° ↘ from top left',
   '45° ↙ 오른쪽 위에서': '45° ↙ from top right',

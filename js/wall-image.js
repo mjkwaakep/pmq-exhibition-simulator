@@ -8,7 +8,7 @@
 const BG_TOLERANCE = 14; // 배경색과의 채널별 허용 오차(압축 노이즈 흡수용)
 const cache = new Map();
 
-function removeBackground(canvas) {
+export function removeBackground(canvas) {
   const ctx = canvas.getContext('2d');
   const { width: w, height: h } = canvas;
   const img = ctx.getImageData(0, 0, w, h);

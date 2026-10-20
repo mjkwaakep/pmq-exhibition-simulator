@@ -201,3 +201,19 @@ body.view-only .toggle-row {
 }
 body.view-only .toggle-row input { display: none; }
 body.view-only .toggle-row:has(input:checked) { border-color: var(--accent-2); color: var(--accent-2); }
+
+/* 실사 렌더 진행 표시(3D 화면 왼쪽 아래) */
+.render-hud {
+  position: absolute; left: 16px; bottom: 16px; z-index: 4; width: 300px; max-width: calc(100% - 32px);
+  padding: 12px; border-radius: 10px; background: rgba(25, 27, 31, 0.92); border: 1px solid var(--line);
+  color: var(--text); font-size: 12px; backdrop-filter: blur(6px);
+}
+.render-hud[hidden] { display: none; }
+.render-hud-text { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-weight: 700; }
+.render-hud-text #render-count { color: var(--text-dim); font-variant-numeric: tabular-nums; font-weight: 400; }
+.render-hud-bar { height: 4px; border-radius: 2px; background: #2a2d33; overflow: hidden; margin-bottom: 10px; }
+.render-hud-bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.render-hud-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.render-hud-actions .action-btn { margin-bottom: 0; padding: 8px; font-size: 11.5px; }
+.action-btn:disabled { opacity: .45; cursor: default; }
+#btn-render.rendering { background: var(--panel-2); border-color: var(--accent); color: var(--accent); }

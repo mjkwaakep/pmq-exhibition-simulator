@@ -49,6 +49,19 @@ pip install numbers-parser Pillow
 python3 tools/build_posters.py "PMQ Exhibition Work List EP_Selected.numbers" .
 ```
 
+## 실사 렌더 (3D PERSPECTIVE의 "렌더 · 실사 이미지")
+
+평소 3D 미리보기는 가볍게 두고, 버튼을 누르면 지금 카메라 그대로 경로 추적(path tracing)으로
+빛 · 그림자 · 반사를 계산해 점점 선명해지는 이미지를 만든다(`js/render-pt.js`,
+`vendor/three-gpu-pathtracer.module.js` 0.0.23 + `vendor/three-mesh-bvh.module.js` 0.7.8).
+600샘플이 쌓이면 멈추고, "이미지 저장"으로 PNG를 내려받는다. 렌더하는 동안에만:
+
+- Aberdeen Street 쪽 큰 창 너머에 빛을 내는 풍경 면을 세우고, 창으로 비스듬히 햇빛이 들어온다.
+- 포스터 벽마다 천장 트랙 스팟(2.2m 간격)을 달고, 천장 라인조명 · 비상구 표시등이 실제로 빛을 낸다.
+- 포스터는 `walls/hires/wall0N.jpg`(피그마에서 1px = 1mm로 내보낸 시안)를 2.5m 안팎 조각으로 나눠 붙인다.
+  벽 시안을 바꿀 때는 `walls/wall0N.png`와 함께 이 파일도 같이 바꿔야 렌더에 반영된다.
+- 치수선 · 동선 화살표 · 비상구 구역 · 사람 실루엣은 숨긴다.
+
 ## 물리 규칙 (절대 변경 금지 — `js/constants.js`에 고정)
 
 - ㄱ자(L자) 구조 — 코너가 하나뿐: Wall01(화이트월, 15,000×2,500mm, 불투명)에서 90도

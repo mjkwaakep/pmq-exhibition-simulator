@@ -7,6 +7,7 @@ import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS } from './constants
 import { loadWallImage } from './wall-image.js';
 import { buildDimensions, buildFlow, buildSite, buildColumns, buildExitZones } from './site-extras.js';
 import { tableSettings, bookTableZs } from './table-settings.js';
+import { RealRender } from './render-pt.js';
 
 const MM2M = 0.001;
 // 반투명 벽 뒷면의 A0 액자 이미지(왼쪽 → 오른쪽, 왼쪽 외벽 쪽에서 볼 때).
@@ -110,6 +111,7 @@ export class PosterWall3D {
     this._resize();
     window.addEventListener('resize', () => this._resize());
     this._tween = null;
+    this.realRender = new RealRender(this); // "렌더" 버튼 — 실사 경로 추적 렌더
     this._animate();
   }
 
@@ -951,6 +953,7 @@ export class PosterWall3D {
 
   _animate() {
     requestAnimationFrame(() => this._animate());
+    if (this.realRender.active) { this.realRender.tick(); return; } // 렌더 중에는 카메라를 고정하고 렌더만 그린다
     if (this._tween) {
       this._tween.t += 0.045;
       const t = Math.min(1, this._tween.t);

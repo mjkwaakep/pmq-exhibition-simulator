@@ -253,11 +253,12 @@ export class PosterWall3D {
     this.flowGroup.visible = flowVisible;
   }
 
-  // Wall01 입면 이미지를 현재 전시 버전에 맞게 바꿔 끼운다.
+  // Wall01 입면 이미지를 붙인다. 피그마 시안(walls/wall01.png)에 모니터까지 들어 있어
+  // 전시 버전과 상관없이 같은 이미지를 쓴다.
   _applyWall01Image() {
     const f = this._wall01Face;
     if (!f) return;
-    const src = this._bookVersion === 'b' ? 'walls/wall01-b.png' : f.base;
+    const src = f.base;
     if (f.src === src) return;
     f.src = src;
     loadWallImage(src).then((canvas) => {
@@ -295,8 +296,8 @@ export class PosterWall3D {
     });
   }
 
-  // 검은 알루미늄 프레임 + 아크릴 판. frames-wall01.json은 인디자인 포스터 월(월25)에서
-  // 고른 포스터의 위치(mm, 벽 왼쪽 위 모서리 기준)다.
+  // 검은 알루미늄 프레임 + 아크릴 판. frames-wall01.json은 피그마 포스터 월(월19)의
+  // 액자 위치(mm, 벽 왼쪽 위 모서리 기준)다.
   _buildFrames(wallH) {
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.35, metalness: 0.6 });
     const glassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.04, metalness: 0.9, transparent: true, opacity: 0.13, depthWrite: false });
@@ -885,7 +886,6 @@ export class PosterWall3D {
         face.rotation.y = rotY;
         pg.add(face);
         if (wall.id === 'wall01') {
-          // Wall01은 전시 버전에 따라 다른 시안 이미지를 쓴다(B = 모니터 3대가 들어간 월25).
           this._wall01Face = { faceMat, base: wall.image, src: null };
           this._applyWall01Image();
           return;

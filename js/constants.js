@@ -9,6 +9,9 @@ export const TRANSLUCENT_WALL_HEIGHT_MM = 2500; // Wall02·03(반투명벽) 높�
 export const ROOM_HEIGHT_MM = 7000; // 3D 공간의 층고 — 전면 유리 파사드 실측 높이 6,930mm(04_Glass Facade, 실내 기준)에 맞춰 7m
 // 전면 유리 파사드 실측(04_Glass Facade/PMQ_Qube facade spec): 폭 16,987 × 높이 6,930mm, 유리판 14장. 창 벽 가운데에 둔다.
 export const FACADE_W_MM = 16987, FACADE_H_MM = 6930, FACADE_PANELS = 14;
+// 유리판 폭(실내에서 봤을 때 왼쪽부터, mm)과 판 사이 유리 리브 간격 22mm — 합계 16,987.
+export const FACADE_PANES_MM = [1213, 1193, 1193, 1190, 1190, 1183, 1190, 1190, 1193, 1193, 1193, 1187, 1188, 1205];
+export const FACADE_FIN_GAP_MM = 22;
 
 // 설치 여백(포스터를 바닥/천장/모서리에 바짝 붙이지 않기 위한 안전 여백).
 // 스펙에 명시되지 않은 값이라 합리적인 기본값으로 고정한다. 필요하면 이 값만 바꾸면 된다.

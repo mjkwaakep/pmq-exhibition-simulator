@@ -8,7 +8,7 @@
 // 세 그룹 모두 "3D 옵션" 체크박스로 켜고 끈다.
 // ============================================================================
 import * as THREE from 'three';
-import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS, FACADE_W_MM, FACADE_H_MM, FACADE_PANELS } from './constants.js';
+import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS, FACADE_W_MM, FACADE_H_MM, FACADE_PANES_MM, FACADE_FIN_GAP_MM } from './constants.js';
 import { tableSettings, bookTableZs } from './table-settings.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
@@ -398,12 +398,15 @@ export function buildSite() {
   panel(fz2, D, 0, H, pierMat);
   if (H > fh) panel(fz1, fz2, fh, H, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, side: THREE.DoubleSide }));
   panel(fz1, fz2, 0, fh, new THREE.MeshBasicMaterial({ color: 0x34383c, fog: false }), 0.9); // 창밖(단색) — 실내 쪽 면만 그려 밖에서 볼 때는 가리지 않는다
-  // 판 사이 유리 리브 13줄
-  for (let i = 1; i < FACADE_PANELS; i++) {
+  // 판 사이 유리 리브 13줄 — 도면의 실측 판 폭대로. 창 그래픽(view-3d.js)은 밖에서 읽히도록 좌우 반전해 붙이므로
+  // 그래픽 속 리브 선과 맞도록 도면의 왼쪽 끝을 높은 z(fz2) 쪽에 둔다.
+  let acc = 0;
+  FACADE_PANES_MM.slice(0, -1).forEach((pw, i) => {
+    acc += pw + (i > 0 ? FACADE_FIN_GAP_MM : 0);
     const bar = new THREE.Mesh(new THREE.BoxGeometry(0.03, fh, 0.03), frameMat);
-    bar.position.set(x, fh / 2, fz1 + (fw * i) / FACADE_PANELS);
+    bar.position.set(x, fh / 2, fz2 - (acc + FACADE_FIN_GAP_MM / 2) / 1000);
     perim.add(bar);
-  }
+  });
 
   // 컨트롤 부스 — 원본 도면 왼쪽 위(왼쪽 커튼에서 약 5.9~11.3m, 상단 벽에서 약 2.6m 돌출). 도면에서 잰 근삿값.
   const booth = new THREE.Mesh(

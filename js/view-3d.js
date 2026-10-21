@@ -586,7 +586,9 @@ export class PosterWall3D {
       new THREE.MeshBasicMaterial({ map: facadeTex, transparent: true, depthWrite: false, toneMapped: false, fog: false, side: THREE.DoubleSide })
     );
     facade.rotation.y = -Math.PI / 2;
-    facade.position.set(winX - 0.012, fh / 2, ROOM_D / 2);
+    // 그래픽 전체를 위로 올려 붙인다(시안 그대로면 글자가 0.45~6.0m로 아래에 몰려 보인다) → 약 1.2~6.75m.
+    const FACADE_LIFT = 0.75;
+    facade.position.set(winX - 0.012, fh / 2 + FACADE_LIFT, ROOM_D / 2);
     facade.renderOrder = 2;
     this.scene.add(facade);
     this._outerWalls.push(facade);

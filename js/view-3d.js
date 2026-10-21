@@ -155,67 +155,6 @@ export class PosterWall3D {
     this.introGroup = g;
   }
 
-  // 서문 벽 그래픽(더미). 일반적인 전시 서문 구성 — 위에서부터 장소·기간, 타이틀, 국문/영문 개요 2단,
-  // 맨 아래 크레딧. 글자 크기와 위치는 벽 크기와 무관하게 실제 치수(mm)로 잡는다: 본문 중심이 눈높이(약 1.45m).
-  _makeForewordTexture(len, h) {
-    const PX = 800; // 1m당 픽셀
-    const c = document.createElement('canvas');
-    c.width = Math.round(len * PX); c.height = Math.round(h * PX);
-    const ctx = c.getContext('2d');
-    const mm = (v) => v * PX / 1000;
-    const yAt = (fromFloorMM) => c.height - mm(fromFloorMM); // 바닥에서 잰 높이 → 캔버스 y
-    const latin = '"Helvetica Neue", Helvetica, Arial, sans-serif';
-    const hangul = '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif';
-    ctx.fillStyle = '#f4f3ef'; ctx.fillRect(0, 0, c.width, c.height);
-    ctx.fillStyle = '#111'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    const margin = mm(180), innerW = c.width - margin * 2;
-    // 낱말 단위로 줄바꿈하며 문단을 쓰고, 마지막 줄 아래 y를 돌려준다.
-    const paragraph = (str, x, y, width, lineH) => {
-      let line = '';
-      str.split(' ').forEach((word) => {
-        const next = line ? `${line} ${word}` : word;
-        if (line && ctx.measureText(next).width > width) { ctx.fillText(line, x, y); y += lineH; line = word; }
-        else line = next;
-      });
-      if (line) { ctx.fillText(line, x, y); y += lineH; }
-      return y;
-    };
-
-    ctx.font = `500 ${mm(26)}px ${latin}`;
-    ctx.fillText('PMQ · Qube 2/F, Hong Kong      0000. 00. 00 — 00. 00', margin, yAt(2130));
-    ctx.font = `700 ${mm(150)}px ${latin}`;
-    ctx.fillText('EVERYDAY', margin, yAt(1930));
-    ctx.fillText('PRACTICE', margin, yAt(1770));
-    ctx.font = `700 ${mm(92)}px ${hangul}`;
-    ctx.fillText('일상의실천', margin, yAt(1630));
-    ctx.fillRect(margin, yAt(1560), innerW, Math.max(1, mm(3))); // 타이틀과 본문을 가르는 선
-
-    const gutter = mm(90), colW = (innerW - gutter) / 2, top = yAt(1470), lineH = mm(42);
-    const en = [
-      'Everyday Practice is a graphic design studio based in Seoul. This exhibition brings together posters, books and digital works from the studio, and looks at how design meets the conditions of everyday life.',
-      'This is placeholder copy for the exhibition overview. It marks the position, length and size of the wall text and will be replaced with the final foreword.',
-    ];
-    const ko = [
-      '일상의실천은 서울을 기반으로 활동하는 그래픽 디자인 스튜디오입니다. 이 전시는 스튜디오가 만들어 온 포스터와 책, 디지털 작업을 한자리에 모아 디자인이 일상의 조건과 만나는 방식을 살펴봅니다.',
-      '이 글은 전시 개요가 들어갈 자리와 분량, 글자 크기를 보여 주기 위한 더미 텍스트이며 최종 서문으로 교체됩니다.',
-    ];
-    ctx.font = `400 ${mm(27)}px ${latin}`;
-    let y = top;
-    en.forEach((p) => { y = paragraph(p, margin, y, colW, lineH) + lineH * 0.6; });
-    ctx.font = `400 ${mm(26)}px ${hangul}`;
-    y = top;
-    ko.forEach((p) => { y = paragraph(p, margin + colW + gutter, y, colW, lineH) + lineH * 0.6; });
-
-    ctx.font = `400 ${mm(18)}px ${latin}`;
-    ctx.fillStyle = 'rgba(17,17,17,0.7)';
-    ctx.fillText('Organised by 0000      Supported by 0000      Design: Everyday Practice', margin, yAt(420));
-
-    const tex = new THREE.CanvasTexture(c);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    return tex;
-  }
-
   setTablesVisible(v) { if (this.tablesGroup) this.tablesGroup.visible = v; }
 
   // 벽 높이가 바뀌면 치수선만 다시 긋는다(벽·포스터는 app.js가 setWalls/setPosters로 다시 짓는다).
@@ -241,7 +180,7 @@ export class PosterWall3D {
     };
     const tablesVisible = this.tablesGroup.visible, dimsVisible = this.dimsGroup.visible;
     dispose(this.tablesGroup);
-    this.introGroup.traverse((o) => { if (o.material && o.material.map) o.material.map.dispose(); });
+    this.introGroup.traverse((o) => { if (o.material && o.material.map && o.material.map !== this._forewordTex) o.material.map.dispose(); }); // 서문 벽 이미지는 다시 쓰므로 남긴다
     dispose(this.introGroup);
     dispose(this.dimsGroup);
     this._buildProps();
@@ -640,7 +579,8 @@ export class PosterWall3D {
       const faceLen = pLen;
       const text = new THREE.Mesh(
         new THREE.PlaneGeometry(faceLen, pH),
-        new THREE.MeshStandardMaterial({ map: this._makeForewordTexture(faceLen, pH), roughness: 0.9 })
+        // 일러스트 시안(PMQ_foreword wall_2200x2400mm.ai)을 그대로 붙인다 — 벽 크기 설정이 시안(2,200 × 2,400)과 다르면 늘어난다.
+        new THREE.MeshStandardMaterial({ map: this._forewordTex || (this._forewordTex = loadTex('textures/foreword-wall.jpg')), roughness: 0.9 })
       );
       text.rotation.y = Math.PI / 2;
       text.position.set(preface.position.x + introT / 2 + 0.002, pH / 2, preface.position.z);

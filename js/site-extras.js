@@ -397,7 +397,7 @@ export function buildSite() {
   panel(0, fz1, 0, H, pierMat);
   panel(fz2, D, 0, H, pierMat);
   if (H > fh) panel(fz1, fz2, fh, H, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, side: THREE.DoubleSide }));
-  panel(fz1, fz2, 0, fh, new THREE.MeshBasicMaterial({ color: 0x34383c, fog: false, side: THREE.DoubleSide }), 0.9); // 창밖(단색)
+  panel(fz1, fz2, 0, fh, new THREE.MeshBasicMaterial({ color: 0x34383c, fog: false }), 0.9); // 창밖(단색) — 실내 쪽 면만 그려 밖에서 볼 때는 가리지 않는다
   // 판 사이 유리 리브 13줄
   for (let i = 1; i < FACADE_PANELS; i++) {
     const bar = new THREE.Mesh(new THREE.BoxGeometry(0.03, fh, 0.03), frameMat);

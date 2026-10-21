@@ -538,7 +538,7 @@ export class PosterWall3D {
     // 창밖은 보이지 않아도 된다 — 흰 창 그래픽이 읽히도록 어둑한 단색으로 둔다(중정 그늘 쪽 느낌).
     const backdrop = new THREE.Mesh(
       new THREE.PlaneGeometry(ROOM_D, glassH),
-      new THREE.MeshBasicMaterial({ color: 0x34383c, fog: false, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({ color: 0x34383c, fog: false }) // 실내 쪽 면만 — 밖에서 창을 볼 때 가리지 않게
     );
     backdrop.rotation.y = -Math.PI / 2;
     backdrop.position.set(winX + 1.4, glassCy, ROOM_D / 2);
@@ -574,13 +574,16 @@ export class PosterWall3D {
 
     // 유리 파사드 그래픽 — 일러스트 시안(04_Glass Facade/PMQ_Qube facade_credits.ai, 아트보드 2)의 글자를
     // 흰색 시트지처럼 유리 안쪽 면에 붙인다. 실측 크기(16,987 × 6,930mm)로 창 벽 가운데, 바닥부터.
-    // 시안이 실내 기준 입면이라 실내에서 바르게 읽힌다. "외벽·커튼·출입구 표시"와 같이 켜고 끈다.
+    // 실제 시트지처럼 밖(중정)에서 바르게 읽히고 실내에서는 좌우가 뒤집혀 보이도록, 이미지를 좌우 반전해 양면으로 붙인다.
+    // "외벽·커튼·출입구 표시"와 같이 켜고 끈다.
     const fw = FACADE_W_MM * MM2M, fh = FACADE_H_MM * MM2M;
     const facadeTex = loadTex('textures/facade-graphic.png');
     facadeTex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    facadeTex.wrapS = THREE.RepeatWrapping;
+    facadeTex.repeat.x = -1; // 실내 쪽 면에서 좌우 반전
     const facade = new THREE.Mesh(
       new THREE.PlaneGeometry(fw, fh),
-      new THREE.MeshBasicMaterial({ map: facadeTex, transparent: true, depthWrite: false, toneMapped: false, fog: false })
+      new THREE.MeshBasicMaterial({ map: facadeTex, transparent: true, depthWrite: false, toneMapped: false, fog: false, side: THREE.DoubleSide })
     );
     facade.rotation.y = -Math.PI / 2;
     facade.position.set(winX - 0.012, fh / 2, ROOM_D / 2);
@@ -959,6 +962,7 @@ export class PosterWall3D {
       isoSE: { pos: [cx + ix, iy, cz + iz], target: [cx, 0.5, cz] }, // 오른쪽 아래(입구 쪽)
       window: { pos: [ROOM_W - 0.8, 1.6, cz], target: [cx - 2, 1.3, cz] },   // 전면 창 앞에 서서 전시장 쪽을 본 시점
       facade: { pos: [12.6, 1.7, cz], target: [ROOM_W, 3.3, cz] },           // 전시장 안쪽(Wall 02·03 바로 앞)에서 창 유리 그래픽 전체를 바라본 시점
+      outside: { pos: [ROOM_W + 16, 4.0, cz], target: [ROOM_W, 3.8, cz] },   // 밖(중정)에서 창을 바라본 시점 — 그래픽이 바르게 읽힌다
       door: { pos: [doorX - 1.2, 1.6, doorZ], target: [doorX + 9, 1.3, doorZ] }, // 반투명 벽 통로(문) 바깥에서 전시장 안을 본 시점
       entrance: { pos: [26.3, 1.6, 19.6], target: [20, 1.3, 13.0] }, // 전시 입구에 서서 서문 벽과 전시장 안쪽을 바라본 시점
     };

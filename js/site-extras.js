@@ -8,7 +8,7 @@
 // 세 그룹 모두 "3D 옵션" 체크박스로 켜고 끈다.
 // ============================================================================
 import * as THREE from 'three';
-import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS } from './constants.js';
+import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS, FACADE_W_MM, FACADE_H_MM, FACADE_PANELS } from './constants.js';
 import { tableSettings, bookTableZs } from './table-settings.js';
 
 const W = ROOM_WIDTH_MM / 1000, D = ROOM_DEPTH_MM / 1000, H = ROOM_HEIGHT_MM / 1000;
@@ -382,10 +382,11 @@ export function buildSite() {
     perim.add(signB);
   }
 
-  // 전면 창 쪽: 가운데는 바닥부터 올라오는 통유리, 양옆은 벽기둥 + 젖혀 둔 검은 커튼, 위는 내려온 천장
+  // 전면 창 쪽: 실측 유리 파사드(폭 16,987 × 높이 6,930mm, 판 14장)를 창 벽 가운데에 두고 양옆은 벽기둥.
+  // 창밖 풍경은 보이지 않아도 되므로 어둑한 단색으로 두어 흰 창 그래픽(view-3d.js)이 읽히게 한다.
   const x = W - 0.03;
   const pierMat = new THREE.MeshStandardMaterial({ color: 0xcfcdc7, roughness: 0.9, side: THREE.DoubleSide });
-  const glassTop = 3.6, pierD = 4.2, drapeD = 1.3;
+  const fw = FACADE_W_MM / 1000, fh = FACADE_H_MM / 1000, fz1 = (D - fw) / 2, fz2 = fz1 + fw;
   const panel = (z1, z2, y1, y2, mat, dx = 0) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(z2 - z1, y2 - y1), mat);
     m.rotation.y = -Math.PI / 2;
@@ -393,26 +394,14 @@ export function buildSite() {
     perim.add(m);
     return m;
   };
-  panel(0, pierD, 0, H, pierMat);
-  panel(D - pierD, D, 0, H, pierMat);
-  panel(pierD, D - pierD, glassTop, H, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, side: THREE.DoubleSide }));
-  // 창밖 풍경(바닥부터) — 기존 창 아래 흰 띠는 현장 재현 모드에서만 숨긴다(view-3d.js setSiteVisible)
-  const outside = new THREE.TextureLoader().load('textures/outside.jpg');
-  outside.colorSpace = THREE.SRGBColorSpace;
-  panel(pierD, D - pierD, 0, glassTop, new THREE.MeshBasicMaterial({ map: outside, fog: false, side: THREE.DoubleSide }), 0.9);
-  const drape = (z1, z2) => {
-    const tex = curtainBase.clone();
-    tex.needsUpdate = true;
-    tex.repeat.set(2.2, 1);
-    panel(z1, z2, 0, glassTop, new THREE.MeshStandardMaterial({ map: tex, roughness: 1, side: THREE.DoubleSide }), -0.06);
-  };
-  drape(pierD, pierD + drapeD);
-  drape(D - pierD - drapeD, D - pierD);
-  // 창호 세로 프레임
-  for (let i = 1; i < 8; i++) {
-    const z = pierD + drapeD + ((D - 2 * (pierD + drapeD)) * i) / 8;
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.03, glassTop, 0.03), frameMat);
-    bar.position.set(x, glassTop / 2, z);
+  panel(0, fz1, 0, H, pierMat);
+  panel(fz2, D, 0, H, pierMat);
+  if (H > fh) panel(fz1, fz2, fh, H, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, side: THREE.DoubleSide }));
+  panel(fz1, fz2, 0, fh, new THREE.MeshBasicMaterial({ color: 0x34383c, fog: false, side: THREE.DoubleSide }), 0.9); // 창밖(단색)
+  // 판 사이 유리 리브 13줄
+  for (let i = 1; i < FACADE_PANELS; i++) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.03, fh, 0.03), frameMat);
+    bar.position.set(x, fh / 2, fz1 + (fw * i) / FACADE_PANELS);
     perim.add(bar);
   }
 

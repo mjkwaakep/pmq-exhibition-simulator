@@ -24,8 +24,8 @@ export const TABLE_LIMITS = {
   sideGap: [0, 3000],
   leafLen: [1000, 16000], leafWid: [300, 2500],
   topH: [400, 1500],
-  introLen: [1000, 16000], introH: [300, 5000],
-  prefaceLen: [500, 6000], prefaceH: [300, 5000],
+  introLen: [1000, 16000], introH: [300, 7000],
+  prefaceLen: [500, 6000], prefaceH: [300, 7000],
 };
 
 const STORAGE_KEY = 'pmq-table-settings';

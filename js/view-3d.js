@@ -3,7 +3,7 @@
 // ============================================================================
 import * as THREE from 'three';
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS } from './constants.js';
+import { ROOM_HEIGHT_MM, ROOM_WIDTH_MM, ROOM_DEPTH_MM, WALLS, FACADE_W_MM, FACADE_H_MM } from './constants.js';
 import { loadWallImage } from './wall-image.js';
 import { buildDimensions, buildFlow, buildSite, buildColumns, buildExitZones } from './site-extras.js';
 import { tableSettings, bookTableZs } from './table-settings.js';
@@ -23,7 +23,7 @@ function applyCrop(tex, mat) {
   tex.repeat.set(u, v);
   tex.offset.set(offsetU, 0);
 }
-const ROOM_H = ROOM_HEIGHT_MM * MM2M; // 5m 층고
+const ROOM_H = ROOM_HEIGHT_MM * MM2M; // 7m 층고
 const ROOM_W = ROOM_WIDTH_MM * MM2M;  // 30m 가로(X) — 왼쪽 외벽(x=0) ~ 전면 창(x=ROOM_W)
 const ROOM_D = ROOM_DEPTH_MM * MM2M;  // 20m 깊이(Z) — 상단 외벽(z=0) ~ 하단 외벽(z=ROOM_D)
 const textureLoader = new THREE.TextureLoader();
@@ -387,7 +387,7 @@ export class PosterWall3D {
   }
 
   _buildStatic() {
-    const ceilingY = ROOM_H; // 5m 층고
+    const ceilingY = ROOM_H; // 7m 층고
 
     // 레퍼런스 사진처럼 부드럽고 밝은 스튜디오 조명 — 큰 소프트박스에서 오는 은은한
     // 확산광 위주로, 강한 스팟보다 전체적으로 고르게 밝다.
@@ -535,12 +535,10 @@ export class PosterWall3D {
     sillBand.position.set(winX, sillH / 2, ROOM_D / 2);
     this.scene.add(sillBand);
 
-    // 창밖 풍경 — 은은하고 흐릿하게(메인 그래픽처럼 강하게 보이지 않도록 낮은 오파시티 + 밝은 톤)
-    const outsideTex = loadTex('textures/outside.jpg');
-    outsideTex.wrapS = THREE.RepeatWrapping;
+    // 창밖은 보이지 않아도 된다 — 흰 창 그래픽이 읽히도록 어둑한 단색으로 둔다(중정 그늘 쪽 느낌).
     const backdrop = new THREE.Mesh(
       new THREE.PlaneGeometry(ROOM_D, glassH),
-      new THREE.MeshBasicMaterial({ map: outsideTex, fog: false, side: THREE.DoubleSide, transparent: true, opacity: 0.55, color: 0xf3f6ee })
+      new THREE.MeshBasicMaterial({ color: 0x34383c, fog: false, side: THREE.DoubleSide })
     );
     backdrop.rotation.y = -Math.PI / 2;
     backdrop.position.set(winX + 1.4, glassCy, ROOM_D / 2);
@@ -573,6 +571,22 @@ export class PosterWall3D {
 
     this.scene.add(winGroup);
     this._winParts = [winGroup, headBand, sillBand];
+
+    // 유리 파사드 그래픽 — 일러스트 시안(04_Glass Facade/PMQ_Qube facade_credits.ai, 아트보드 2)의 글자를
+    // 흰색 시트지처럼 유리 안쪽 면에 붙인다. 실측 크기(16,987 × 6,930mm)로 창 벽 가운데, 바닥부터.
+    // 시안이 실내 기준 입면이라 실내에서 바르게 읽힌다. "외벽·커튼·출입구 표시"와 같이 켜고 끈다.
+    const fw = FACADE_W_MM * MM2M, fh = FACADE_H_MM * MM2M;
+    const facadeTex = loadTex('textures/facade-graphic.png');
+    facadeTex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    const facade = new THREE.Mesh(
+      new THREE.PlaneGeometry(fw, fh),
+      new THREE.MeshBasicMaterial({ map: facadeTex, transparent: true, depthWrite: false, toneMapped: false, fog: false })
+    );
+    facade.rotation.y = -Math.PI / 2;
+    facade.position.set(winX - 0.012, fh / 2, ROOM_D / 2);
+    facade.renderOrder = 2;
+    this.scene.add(facade);
+    this._outerWalls.push(facade);
   }
 
   // 허리 높이(900mm)의 가늘고 긴 테이블 + 간단한 사람 모형(둘 다 옵션 토글용).
@@ -944,6 +958,7 @@ export class PosterWall3D {
       isoSW: { pos: [cx - ix, iy, cz + iz], target: [cx, 0.5, cz] }, // 왼쪽 아래
       isoSE: { pos: [cx + ix, iy, cz + iz], target: [cx, 0.5, cz] }, // 오른쪽 아래(입구 쪽)
       window: { pos: [ROOM_W - 0.8, 1.6, cz], target: [cx - 2, 1.3, cz] },   // 전면 창 앞에 서서 전시장 쪽을 본 시점
+      facade: { pos: [12.6, 1.7, cz], target: [ROOM_W, 3.3, cz] },           // 전시장 안쪽(Wall 02·03 바로 앞)에서 창 유리 그래픽 전체를 바라본 시점
       door: { pos: [doorX - 1.2, 1.6, doorZ], target: [doorX + 9, 1.3, doorZ] }, // 반투명 벽 통로(문) 바깥에서 전시장 안을 본 시점
       entrance: { pos: [26.3, 1.6, 19.6], target: [20, 1.3, 13.0] }, // 전시 입구에 서서 서문 벽과 전시장 안쪽을 바라본 시점
     };

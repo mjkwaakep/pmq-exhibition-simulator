@@ -61,7 +61,7 @@ function ensureThree() {
   if (three) return;
   three = new PosterWall3D(document.getElementById('three-canvas'));
   three.setCeilingLightsVisible(document.getElementById('toggle-lights').checked); // 기본은 꺼짐
-  three.goTo('isoSE');
+  three.goTo('outside'); // 처음 열면 밖에서 창문 그래픽을 보는 뷰
 }
 
 // ---------------- Per-wall poster-count panel ----------------

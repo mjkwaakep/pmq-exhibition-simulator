@@ -1,8 +1,9 @@
 // ============================================================================
 // LAYOUT VIEW — 투시 없는 정면(입면) 도면. 3개 벽면을 실제 비율로 펼쳐서 보여준다.
 // ============================================================================
-import { GAP_MM, MARGIN } from './constants.js';
+import { GAP_MM, MARGIN, FACADE_W_MM, FACADE_H_MM, FACADE_PANES_MM, FACADE_FIN_GAP_MM } from './constants.js';
 import { VIEW_ONLY } from './share.js';
+import { tableSettings } from './table-settings.js';
 import { loadWallImage } from './wall-image.js';
 
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -111,5 +112,65 @@ export function renderLayoutView(container, layout) {
     wrap.appendChild(card);
   });
 
+  // 포스터 벽 아래에 유리 파사드 그래픽과 서문 벽 시안을 같이 펼쳐 둔다 — 3D와 같은 텍스처를 쓴다.
+  wrap.appendChild(graphicCard({
+    name: VIEW_ONLY ? 'Glass Facade' : '유리 파사드',
+    lengthMM: FACADE_W_MM, heightMM: FACADE_H_MM,
+    note: VIEW_ONLY ? 'White vinyl · seen from outside' : '화이트 시트 · 바깥에서 본 모습',
+    href: 'textures/facade-graphic.png', bg: '#2a3036',
+    scale: Math.min(scale, (panelW - 64) / FACADE_W_MM),
+    fins: true,
+  }));
+  const fLen = tableSettings.prefaceLen, fH = tableSettings.prefaceH;
+  wrap.appendChild(graphicCard({
+    name: VIEW_ONLY ? 'Foreword Wall' : '서문 벽',
+    lengthMM: fLen, heightMM: fH,
+    note: VIEW_ONLY ? 'Exhibition foreword' : '전시 서문',
+    href: 'textures/foreword-wall.jpg', bg: '#fff',
+    scale: Math.min((panelW - 64) / fLen, 640 / fH), // 좁은 벽이라 글이 읽히게 따로 키운다
+  }));
+
   container.appendChild(wrap);
+}
+
+// 시안 이미지 한 장을 벽 크기 그대로 보여주는 카드(파사드·서문 벽).
+function graphicCard({ name, lengthMM, heightMM, note, href, bg, scale, fins }) {
+  const wPx = lengthMM * scale, hPx = heightMM * scale;
+  const gx = 32, gy = 4, svgH = hPx + 26 + 8;
+
+  const card = document.createElement('div');
+  card.className = 'layout-wall-card';
+  const head = document.createElement('div');
+  head.className = 'layout-wall-head';
+  head.innerHTML = `<span class="wall-tag">${name}</span>
+    <span class="wall-dim">${lengthMM.toLocaleString()} × ${heightMM.toLocaleString()} mm</span>
+    <span class="wall-mat">${note}</span>`;
+  card.appendChild(head);
+
+  const svg = el('svg', { width: wPx + 64, height: svgH, viewBox: `0 0 ${wPx + 64} ${svgH}` });
+  el('rect', { x: gx, y: gy, width: wPx, height: hPx, fill: bg, stroke: 'var(--wall-stroke)', 'stroke-width': 1.5 }, svg);
+  el('image', { x: gx, y: gy, width: wPx, height: hPx, href, preserveAspectRatio: 'none' }, svg);
+
+  // 유리 핀(창틀) — 3D와 같은 실측 유리 폭 위치
+  if (fins) {
+    let acc = 0;
+    FACADE_PANES_MM.slice(0, -1).forEach((pw, i) => {
+      acc += pw + (i > 0 ? FACADE_FIN_GAP_MM : 0);
+      const fx = gx + (acc + FACADE_FIN_GAP_MM / 2) * scale;
+      el('line', { x1: fx, y1: gy, x2: fx, y2: gy + hPx, stroke: 'rgba(255,255,255,.28)', 'stroke-width': 1 }, svg);
+    });
+  }
+
+  const rulerY = gy + hPx + 6;
+  el('line', { x1: gx, y1: rulerY, x2: gx + wPx, y2: rulerY, stroke: 'var(--guide-strong)', 'stroke-width': 1 }, svg);
+  const step = lengthMM <= 3000 ? 500 : lengthMM <= 8000 ? 1000 : 2000;
+  for (let m = 0; m <= lengthMM; m += step) {
+    const tx = gx + m * scale;
+    el('line', { x1: tx, y1: rulerY, x2: tx, y2: rulerY + 5, stroke: 'var(--guide-strong)', 'stroke-width': 1 }, svg);
+    const t = el('text', { x: tx, y: rulerY + 16, 'font-size': 9, 'text-anchor': 'middle', fill: 'var(--text-dim)' }, svg);
+    t.textContent = (m / 1000) + 'm';
+  }
+
+  card.appendChild(svg);
+  return card;
 }

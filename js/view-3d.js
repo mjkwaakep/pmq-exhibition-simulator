@@ -11,12 +11,12 @@ import { RealRender } from './render-pt.js';
 
 const MM2M = 0.001;
 // 반투명 벽 뒷면의 A0 액자 이미지(왼쪽 → 오른쪽, 왼쪽 외벽 쪽에서 볼 때).
-const BACK_FRAMES = {
+export const BACK_FRAMES = {
   wall02: ['frames/back-1.jpg', 'frames/back-2.jpg', 'frames/back-3.jpg'],
   wall03: ['frames/back-4.jpg', 'frames/back-5.jpg', 'frames/back-6.jpg'],
 };
 // 통로 쪽 기준 액자의 중심 위치(m) — 처음 3등분 배치 때 자리 그대로(벽 끝에서 액자 테두리까지 721 / 888mm).
-const BACK_FRAME_ANCHOR = { wall02: { fromEnd: 7 / 6 }, wall03: { fromStart: 8 / 6 } };
+export const BACK_FRAME_ANCHOR = { wall02: { fromEnd: 7 / 6 }, wall03: { fromStart: 8 / 6 } };
 // 벽 시안 이미지에서 실제 벽 크기에 해당하는 부분만 보이게 한다(setPosters가 crop을 계산해 둔다).
 function applyCrop(tex, mat) {
   const { u, v, offsetU } = mat.userData.crop;

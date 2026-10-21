@@ -4,6 +4,8 @@
 import { GAP_MM, MARGIN, FACADE_W_MM, FACADE_H_MM, FACADE_PANES_MM, FACADE_FIN_GAP_MM } from './constants.js';
 import { VIEW_ONLY } from './share.js';
 import { tableSettings } from './table-settings.js';
+import { getWallGap } from './wall-settings.js';
+import { BACK_FRAMES, BACK_FRAME_ANCHOR } from './view-3d.js';
 import { loadWallImage } from './wall-image.js';
 
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -112,6 +114,8 @@ export function renderLayoutView(container, layout) {
     wrap.appendChild(card);
   });
 
+  wrap.appendChild(backCard(layout.walls.map((e) => e.wall), scale));
+
   // 포스터 벽 아래에 유리 파사드 그래픽과 서문 벽 시안을 같이 펼쳐 둔다 — 3D와 같은 텍스처를 쓴다.
   wrap.appendChild(graphicCard({
     name: VIEW_ONLY ? 'Glass Facade' : '유리 파사드',
@@ -131,6 +135,63 @@ export function renderLayoutView(container, layout) {
   }));
 
   container.appendChild(wrap);
+}
+
+// Wall02·03 뒷면(왼쪽 외벽 쪽에서 본 면)을 통로를 사이에 두고 한 장으로 — A0 액자 6장.
+// 액자 위치·크기는 view-3d.js의 _buildBackFrames와 같은 값(테두리 25mm, 간격 1,200mm, 중심 높이 1,350mm).
+function backCard(walls, scale) {
+  const w2 = walls.find((w) => w.id === 'wall02'), w3 = walls.find((w) => w.id === 'wall03');
+  const gapMM = getWallGap();
+  const totalMM = w2.lengthMM + gapMM + w3.lengthMM;
+  const hMM = Math.max(w2.heightMM, w3.heightMM);
+  const wPx = totalMM * scale, hPx = hMM * scale;
+  const gx = 32, gy = 4, svgH = hPx + 26 + 22 + 8;
+
+  const card = document.createElement('div');
+  card.className = 'layout-wall-card';
+  const head = document.createElement('div');
+  head.className = 'layout-wall-head';
+  head.innerHTML = `<span class="wall-tag">${VIEW_ONLY ? 'Wall 02 · 03 — back' : 'Wall 02 · 03 뒷면'}</span>
+    <span class="wall-dim">${w2.lengthMM.toLocaleString()} + ${gapMM.toLocaleString()} + ${w3.lengthMM.toLocaleString()} mm</span>
+    <span class="wall-mat">${VIEW_ONLY ? 'A0 frames · seen from the side wall' : 'A0 액자 · 왼쪽 외벽 쪽에서 본 면'}</span>
+    <span class="wall-count">${VIEW_ONLY ? '6 posters' : '포스터 6장'}</span>`;
+  card.appendChild(head);
+
+  const svg = el('svg', { width: wPx + 64, height: svgH, viewBox: `0 0 ${wPx + 64} ${svgH}` });
+  const floorY = gy + hPx;
+  const segs = [{ wall: w2, x0: 0 }, { wall: w3, x0: w2.lengthMM + gapMM }];
+  const border = 25, imgW = 841, imgH = 1189, gap = 1200, cy = 1350, step = imgW + border * 2 + gap;
+  segs.forEach(({ wall, x0 }) => {
+    const sx = gx + x0 * scale, sw = wall.lengthMM * scale, sh = wall.heightMM * scale;
+    el('rect', { x: sx, y: floorY - sh, width: sw, height: sh, fill: 'var(--wall-translucent)', stroke: 'var(--wall-stroke)', 'stroke-width': 1.5 }, svg);
+    const name = el('text', { x: sx + sw / 2, y: floorY + 38, 'font-size': 10, 'text-anchor': 'middle', fill: 'var(--text-dim)' }, svg);
+    name.textContent = wall.name;
+    const files = BACK_FRAMES[wall.id], anchor = BACK_FRAME_ANCHOR[wall.id], Lmm = wall.lengthMM;
+    files.forEach((file, i) => {
+      const cx = anchor.fromEnd ? Lmm - anchor.fromEnd * 1000 - (files.length - 1 - i) * step : anchor.fromStart * 1000 + i * step;
+      const fx = gx + (x0 + cx) * scale, fy = floorY - cy * scale;
+      const bw = (imgW + border * 2) * scale, bh = (imgH + border * 2) * scale;
+      el('rect', { x: fx - bw / 2, y: fy - bh / 2, width: bw, height: bh, fill: '#2d2725' }, svg);
+      el('image', { x: fx - imgW * scale / 2, y: fy - imgH * scale / 2, width: imgW * scale, height: imgH * scale, href: file, preserveAspectRatio: 'xMidYMid slice' }, svg);
+    });
+  });
+  // 가운데 통로
+  const px = gx + w2.lengthMM * scale, pw = gapMM * scale;
+  el('line', { x1: px, y1: floorY, x2: px + pw, y2: floorY, stroke: 'var(--guide)', 'stroke-width': 1, 'stroke-dasharray': '4 4' }, svg);
+  const pt = el('text', { x: px + pw / 2, y: floorY - 8, 'font-size': 9, 'text-anchor': 'middle', fill: 'var(--text-dim)' }, svg);
+  pt.textContent = VIEW_ONLY ? 'Passage' : '통로';
+
+  const rulerY = floorY + 6;
+  el('line', { x1: gx, y1: rulerY, x2: gx + wPx, y2: rulerY, stroke: 'var(--guide-strong)', 'stroke-width': 1 }, svg);
+  for (let m = 0; m <= totalMM; m += 2000) {
+    const tx = gx + m * scale;
+    el('line', { x1: tx, y1: rulerY, x2: tx, y2: rulerY + 5, stroke: 'var(--guide-strong)', 'stroke-width': 1 }, svg);
+    const t = el('text', { x: tx, y: rulerY + 16, 'font-size': 9, 'text-anchor': 'middle', fill: 'var(--text-dim)' }, svg);
+    t.textContent = (m / 1000) + 'm';
+  }
+
+  card.appendChild(svg);
+  return card;
 }
 
 // 시안 이미지 한 장을 벽 크기 그대로 보여주는 카드(파사드·서문 벽).
